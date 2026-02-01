@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SUVOS Unified Precision Planner v18.0</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 20px; background: #f4f6f9; display: flex; gap: 20px; height: 95vh; }
+        .panel { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow-y: auto; }
+        .controls { flex: 1; min-width: 480px; max-width: 530px; }
+        .visualizer { flex: 3; display: flex; flex-direction: column; align-items: center; background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 20px; overflow: hidden; }
+        h2 { color: #1a73e8; margin-top: 0; border-bottom: 2px solid #e8f0fe; padding-bottom: 10px; }
+        .section-title { font-size: 0.9em; font-weight: bold; color: #1a73e8; margin: 15px 0 8px 0; text-transform: uppercase; border-left: 3px solid #1a73e8; padding-left: 8px;}
+        .input-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.85em; font-weight: 600; margin-bottom: 4px; color: #444; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ccd; border-radius: 6px; box-sizing: border-box; }
+        .flex-row { display: flex; gap: 10px; }
+        #custom-k-box { display: none; margin-top: 8px; background: #f0f7ff; padding: 10px; border-radius: 6px; border: 1px dashed #1a73e8; }
+
+        #result-box { margin-top: 15px; padding: 15px; border-radius: 8px; border-left: 6px solid #ccc; background: #f8f9fa; position: relative; }
+
+        /* Bar Styling */
+        .perf-track { width: 100%; height: 16px; background: #e2e8f0; border-radius: 8px; margin-top: 15px; overflow: hidden; border: 1px solid #ccc; position: relative; }
+        .perf-bar { height: 100%; width: 0%; transition: width 0.4s ease-out, background-color 0.4s ease; }
+
+        /* Clinical Marker at 12% (12 eACH on 100 Scale) */
+        .target-line { position: absolute; left: 12%; top: 0; bottom: 0; width: 2px; background: #222; z-index: 5; box-shadow: 1px 0 2px rgba(0,0,0,0.3); }
+
+        .perf-label { font-size: 0.75em; color: #666; position: relative; height: 20px; margin-top: 4px; font-weight: 600; }
+        .lbl { position: absolute; transform: translateX(-50%); }
+
+        .equation-box { background: #1a1a1a; color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: left; }
+        .math-small { font-size: 0.9em; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        canvas { background: #fff; border: 2px solid #333; cursor: crosshair; border-radius: 8px; }
+        .mode-btn { flex: 1; padding: 10px; cursor: pointer; border-radius: 6px; border: 1px solid #1a73e8; background: white; color: #1a73e8; font-weight: bold; }
+        .mode-btn.active { background: #1a73e8; color: white; }
+        .opt-btn { width: 100%; margin-top: 10px; background: #38a169; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        .action-btn { width: 100%; margin-top: 8px; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9em; }
+        .report-btn { background: #2d3748; color: white; } .report-btn:hover { background: #1a202c; }
+        .reset-btn { background: #e53e3e; color: white; } .reset-btn:hover { background: #c53030; }
+
+        .unit-toggle { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .metric-val { font-weight: bold; color: #333; }
+        .ur-accent { color: #1a73e8; } .s6-accent { color: #6a1b9a; }
+        .save-load-btn { background: #555; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.85em; margin-right: 5px; }
+        .save-load-btn:hover { background: #333; }
+        .instructions { font-size: 0.82em; color: #555; background: #fffde7; padding: 12px; border-radius: 6px; border: 1px solid #ffe58f; margin-top: 15px; width: 100%; max-width: 1000px; }
+
+        .split-metric { display: flex; justify-content: space-between; font-size: 0.9em; margin-top: 5px; padding: 4px 0; border-bottom: 1px dashed #ddd; }
+    </style>
+</head>
+<body>
+
+<div class="panel controls">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h2 style="margin:0; border:none;">Unified SUVOS Planner</h2>
+        <button class="unit-toggle" id="unitSwitch" onclick="toggleUnits()">Switch to Foot (ft)</button>
+    </div>
+
+    <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+        <button class="save-load-btn" onclick="saveLayout()">💾 Save</button>
+        <button class="save-load-btn" onclick="loadLayout()">📂 Load</button>
+        <button class="save-load-btn" style="background:#d32f2f;" onclick="clearLayout()">✖ Clear All</button>
+    </div>
+
+    <div class="equation-box">
+        <div class="math-small">
+            \[ R_{UR} = \int_{r_0}^{r_1} \frac{2\pi v_B}{V} \left( 1 - e^{-\frac{\kappa P}{2\pi v_B r}} \right) r dr \]
+            \[ R_6(t) = \frac{n_{act}(t) \cdot G}{V} \left( 1 - e^{-\kappa J} \right) \]
+        </div>
+        <div style="font-size: 1.3em; color: #4ade80;">
+            \[ R_{total}(t) = R_{UR} + R_6(t) \]
+        </div>
+    </div>
+
+    <div class="input-group flex-row">
+        <button id="drawMode" class="mode-btn active" onclick="setMode('draw')">Draw Room</button>
+        <button id="unitMode" class="mode-btn" onclick="setMode('unit')">Manual Units</button>
+    </div>
+
+    <div class="section-title">Joint Deployment & Occupancy</div>
+    <div class="flex-row">
+        <div class="input-group" style="flex:1">
+            <label class="s6-accent">Batch SUVOS-6</label>
+            <input type="number" id="targetS6" value="15" min="0" onchange="generateUnits()">
+        </div>
+        <div class="input-group" style="flex:1">
+            <label class="ur-accent">Batch SUVOS-UR</label>
+            <input type="number" id="targetUR" value="8" min="0" onchange="generateUnits()">
+        </div>
+    </div>
+    <div class="flex-row">
+        <div class="input-group" style="flex:1">
+            <label>Occupant Count</label>
+            <input type="number" id="occupantCount" value="8" min="0" onchange="initOccupants()">
+        </div>
+        <div class="input-group" style="flex:1">
+            <label>Walk Speed [m/s]</label>
+            <input type="range" id="walkSpeed" min="0.00" max="2.50" step="0.1" value="0.8" oninput="document.getElementById('speedDisp').innerText = this.value">
+            <div style="font-size: 0.75em; text-align: center;"><span id="speedDisp">0.8</span> m/s</div>
+        </div>
+    </div>
+    <button class="opt-btn" onclick="optimizeUnits()">Optimize Unified Layout</button>
+
+    <div class="section-title">Unified Pathogen Settings</div>
+    <div class="input-group">
+        <label>Target Pathogen (κ) [m²/J]</label>
+        <select id="virus" onchange="toggleCustomK()">
+            <option value="0.350">SARS-CoV-2 (κ = 0.350)</option>
+            <option value="0.110">Measles (κ = 0.110)</option>
+            <option value="0.080">Influenza A (κ = 0.080)</option>
+            <option value="0.060">Tuberculosis (κ = 0.060)</option>
+            <option value="0.020">Adenovirus (κ = 0.020)</option>
+            <option value="custom">-- Input Custom κ --</option>
+        </select>
+        <div id="custom-k-box">
+            <label>Custom κ Value</label>
+            <input type="number" id="customK" value="0.5" step="0.01" onchange="updateSim()">
+        </div>
+    </div>
+
+    <div class="section-title s6-accent">SUVOS-6 Physics (Conal)</div>
+    <div class="flex-row">
+        <div class="input-group" style="flex:1">
+            <label>Airflow G [<span class="u-vol">m³</span>/s]</label>
+            <input type="number" id="gVal" value="6.0" step="0.5" onchange="updateSim()">
+        </div>
+        <div class="input-group" style="flex:1">
+            <label>Power P [W]</label>
+            <input type="number" id="pS6" value="0.6" step="0.1" onchange="updateSim()">
+        </div>
+    </div>
+
+    <div class="section-title ur-accent">SUVOS-UR Physics (Radial)</div>
+    <div class="flex-row">
+        <div class="input-group" style="flex:1">
+            <label>Convection \(v_B\) [m/s]</label>
+            <input type="number" id="vbVal" value="0.1" step="0.01" onchange="updateSim()">
+        </div>
+        <div class="input-group" style="flex:1">
+            <label>Power P [W]</label>
+            <input type="number" id="pUR" value="0.4" step="0.1" onchange="updateSim()">
+        </div>
+    </div>
+
+    <div class="section-title">Geometric Data</div>
+    <div class="input-group">
+        <label>Ceiling Height (H) [<span class="u-dist">m</span>]</label>
+        <input type="number" id="roomH" value="3.0" step="0.1" onchange="updateSim()">
+    </div>
+
+    <div id="result-box">
+        <div style="font-size: 0.85em; display:flex; justify-content:space-between;">
+            <span>Area: <span id="areaVal" class="metric-val">0</span> <span class="u-area">m²</span></span>
+            <span>Total Units: <span id="totalUnits" class="metric-val">0</span></span>
+        </div>
+
+        <div class="split-metric ur-accent">
+            <span>R_UR (Static):</span> <span id="val_ur" style="font-weight:bold;">0.00</span>
+        </div>
+        <div class="split-metric s6-accent">
+            <span>R_6(t) (Dynamic):</span> <span id="val_s6" style="font-weight:bold;">0.00</span>
+        </div>
+
+        <div style="font-weight: bold; margin-top:12px; font-size: 1.4em; color: #333;">Unified R(t): <span id="eachVal">0.00</span></div>
+
+        <div class="perf-track">
+            <div class="target-line" title="Clinical Target (12 eACH)"></div>
+            <div id="perfBar" class="perf-bar"></div>
+        </div>
+        <div class="perf-label">
+            <span class="lbl" style="left:0%">0</span>
+            <span class="lbl" style="left:12%; color:#222; font-weight:bold;">12</span>
+            <span class="lbl" style="left:50%">50</span>
+            <span class="lbl" style="left:100%">100+</span>
+        </div>
+
+        <div style="font-size: 0.9em; color: #666; margin-top: 8px;">60s Average: <span id="avgEach" class="metric-val" style="color:#1a73e8">0.00</span></div>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button class="action-btn report-btn" onclick="generateReport()">📄 Generate Report</button>
+        <button class="action-btn reset-btn" onclick="resetSim()">↺ Reset Simulation</button>
+    </div>
+</div>
+
+<div class="visualizer">
+    <canvas id="canvas"></canvas>
+    <div class="instructions">
+        • <b>Drawing:</b> V7.0 Logic. Click points to shape room. Click start to close.<br>
+        • <b>Bar Scale:</b> 0-100 eACH. Black line at 12% marks the 12 eACH target.<br>
+        • <b>Colors:</b> <span style="color:#e53e3e">Red (0-3)</span> → <span style="color:#ffa500">Orange (3-6)</span> → <span style="color:#ecc94b">Yel-Grn (6-12)</span> → <span style="color:#38a169">Green (>12)</span>.
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let points = []; let units = []; let occupants = [];
+    let isClosed = false; let mode = 'draw';
+    let mousePos = {x:0, y:0};
+    let isMetric = true;
+    let eachHistory = [];
+    let lastTotalEACH = 0; // Store for report
+    let lastArea = 0;
+    let lastVol = 0;
+    let lastUR_Val = 0;
+    let lastS6_Val = 0;
+
+    const M_TO_FT = 3.28084;
+    const origin = {x: 50, y: 50};
+    const baseScale = 18;
+
+    function saveLayout() {
+        const data = { points, units, h: document.getElementById('roomH').value };
+        localStorage.setItem('suvos_layout', JSON.stringify(data));
+        alert("Layout Saved!");
+    }
+
+    function loadLayout() {
+        const data = JSON.parse(localStorage.getItem('suvos_layout'));
+        if (data) {
+            points = data.points || []; units = data.units || [];
+            document.getElementById('roomH').value = data.h || 3.0;
+            isClosed = true; initOccupants(); updateSim();
+            alert("Layout Loaded!");
+        } else alert("No saved layout.");
+    }
+
+    function clearLayout() {
+        if(confirm("Clear current room?")) { points = []; units = []; isClosed = false; mode='draw'; updateSim(); }
+    }
+
+    function resetSim() {
+        if(confirm("Reset occupants and units? (Keeps Room)")) {
+            units = [];
+            initOccupants();
+            updateSim();
+        }
+    }
+
+    function generateReport() {
+        const countS6 = units.filter(u => u.type === 'S6').length;
+        const countUR = units.filter(u => u.type === 'UR').length;
+        const h_val = document.getElementById('roomH').value;
+        const unit = isMetric ? 'm' : 'ft';
+        const date = new Date().toLocaleString();
+        const status = lastTotalEACH >= 12 ? "PASS (Compliant)" : "FAIL (Non-Compliant)";
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "SUVOS Unified Precision Planner - Simulation Report\n";
+        csvContent += `Generated: ${date}\n\n`;
+        csvContent += "--- Room Geometry ---\n";
+        csvContent += `Area,${lastArea} ${unit}²\n`;
+        csvContent += `Volume,${lastVol} ${unit}³\n`;
+        csvContent += `Ceiling Height,${h_val} ${unit}\n\n`;
+        csvContent += "--- Hardware Manifest ---\n";
+        csvContent += `SUVOS-UR Units,${countUR}\n`;
+        csvContent += `SUVOS-6 Units,${countS6}\n`;
+        csvContent += `Total Units,${units.length}\n`;
+        csvContent += `Unit Density,${(units.length/lastArea).toFixed(3)} units/${unit}²\n\n`;
+        csvContent += "--- Safety Certification ---\n";
+        csvContent += `R_UR (Static eACH),${lastUR_Val.toFixed(2)}\n`;
+        csvContent += `R_6(t) (Dynamic eACH),${lastS6_Val.toFixed(2)}\n`;
+        csvContent += `UNIFIED TOTAL R(t),${lastTotalEACH.toFixed(2)}\n`;
+        csvContent += `Clinical Standard,12.00 eACH\n`;
+        csvContent += `STATUS,${status}\n`;
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "SUVOS_Compliance_Report.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function toggleCustomK() {
+        const isCustom = document.getElementById('virus').value === 'custom';
+        document.getElementById('custom-k-box').style.display = isCustom ? 'block' : 'none';
+        updateSim();
+    }
+
+    function toggleUnits() {
+        const hIn = document.getElementById('roomH');
+        const gIn = document.getElementById('gVal');
+        if (isMetric) {
+            hIn.value = (parseFloat(hIn.value) * M_TO_FT).toFixed(2);
+            gIn.value = (parseFloat(gIn.value) * (M_TO_FT**3)).toFixed(2);
+            document.getElementById('unitSwitch').innerText = "Switch to Meter (m)";
+        } else {
+            hIn.value = (parseFloat(hIn.value) / M_TO_FT).toFixed(2);
+            gIn.value = (parseFloat(gIn.value) / (M_TO_FT**3)).toFixed(2);
+            document.getElementById('unitSwitch').innerText = "Switch to Foot (ft)";
+        }
+        isMetric = !isMetric;
+        document.querySelectorAll('.u-dist').forEach(el => el.innerText = isMetric ? 'm' : 'ft');
+        document.querySelectorAll('.u-area').forEach(el => el.innerText = isMetric ? 'm²' : 'ft²');
+        document.querySelectorAll('.u-vol').forEach(el => el.innerText = isMetric ? 'm³' : 'ft³');
+        updateSim();
+    }
+
+    function setMode(m) {
+        mode = m;
+        document.getElementById('drawMode').className = m === 'draw' ? 'mode-btn active' : 'mode-btn';
+        document.getElementById('unitMode').className = m === 'unit' ? 'mode-btn active' : 'mode-btn';
+    }
+
+    function initOccupants() {
+        occupants = [];
+        const count = parseInt(document.getElementById('occupantCount').value);
+        if(!isClosed || points.length < 3) return;
+        let minX = Math.min(...points.map(p => p.x)), maxX = Math.max(...points.map(p => p.x));
+        let minY = Math.min(...points.map(p => p.y)), maxY = Math.max(...points.map(p => p.y));
+        for(let i=0; i<count; i++) {
+            let rx, ry;
+            do { rx = minX + Math.random() * (maxX - minX); ry = minY + Math.random() * (maxY - minY); } while (!isInside({x: rx, y: ry}, points));
+            occupants.push({ x: rx, y: ry, angle: Math.random() * Math.PI * 2 });
+        }
+    }
+
+    function generateUnits() {
+        if(!isClosed) return;
+        units = [];
+        const countS6 = parseInt(document.getElementById('targetS6').value);
+        const countUR = parseInt(document.getElementById('targetUR').value);
+        let minX = Math.min(...points.map(p => p.x)), maxX = Math.max(...points.map(p => p.x));
+        let minY = Math.min(...points.map(p => p.y)), maxY = Math.max(...points.map(p => p.y));
+        for(let i=0; i<countS6; i++) units.push({x: (minX+maxX)/2, y: (minY+maxY)/2, type: 'S6'});
+        for(let i=0; i<countUR; i++) units.push({x: (minX+maxX)/2, y: (minY+maxY)/2, type: 'UR'});
+        optimizeUnits();
+    }
+
+    function isInside(p, poly) {
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            if (((poly[i].y > p.y) != (poly[j].y > p.y)) && (p.x < (poly[j].x - poly[i].x) * (p.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)) inside = !inside;
+        }
+        return inside;
+    }
+
+    function optimizeUnits() {
+        if (!isClosed || units.length === 0) return;
+        const minX = Math.min(...points.map(p => p.x)), maxX = Math.max(...points.map(p => p.x));
+        const minY = Math.min(...points.map(p => p.y)), maxY = Math.max(...points.map(p => p.y));
+        const samples = [];
+        for(let x = minX; x <= maxX; x += 0.5) for(let y = minY; y <= maxY; y += 0.5) if(isInside({x,y}, points)) samples.push({x,y});
+        for(let iter = 0; iter < 40; iter++) {
+            const centroids = units.map(() => ({x: 0, y: 0, count: 0}));
+            samples.forEach(s => {
+                let minDist = Infinity, closestIdx = 0;
+                units.forEach((u, i) => { let d = Math.hypot(u.x - s.x, u.y - s.y); if(d < minDist) { minDist = d; closestIdx = i; } });
+                centroids[closestIdx].x += s.x; centroids[closestIdx].y += s.y; centroids[closestIdx].count++;
+            });
+            centroids.forEach((c, i) => { if(c.count > 0) { units[i].x = c.x / c.count; units[i].y = c.y / c.count; } });
+        }
+        updateSim();
+    }
+
+    function getArea(poly) {
+        let area = 0; for (let i = 0; i < poly.length; i++) { let j = (i + 1) % poly.length; area += poly[i].x * poly[j].y - poly[j].x * poly[i].y; }
+        return Math.abs(area / 2);
+    }
+
+    function getBarColor(val) {
+        if(val < 3) return '#ff4444'; // Red
+        if(val < 6) return '#ffaa00'; // Orange
+        if(val < 12) return '#d4d900'; // Yellow/Green
+        if(val < 30) return '#38a169'; // Green
+        if(val < 60) return '#2f855a'; // Deep Green
+        return '#0bc5ea'; // Cyan
+    }
+
+    function updateSim() {
+        const h_m = isMetric ? parseFloat(document.getElementById('roomH').value) : parseFloat(document.getElementById('roomH').value) / M_TO_FT;
+        const g_m3s = isMetric ? parseFloat(document.getElementById('gVal').value) : parseFloat(document.getElementById('gVal').value) / (M_TO_FT**3);
+        const pS6 = parseFloat(document.getElementById('pS6').value);
+        const pUR = parseFloat(document.getElementById('pUR').value);
+        const vb = parseFloat(document.getElementById('vbVal').value);
+        const virSelect = document.getElementById('virus').value;
+        const kappa = (virSelect === 'custom') ? parseFloat(document.getElementById('customK').value) : parseFloat(virSelect);
+        const speed_ms = parseFloat(document.getElementById('walkSpeed').value);
+
+        let area_m2 = isClosed ? getArea(points) : 0;
+        const vol_m3 = area_m2 * h_m;
+
+        // Store for Report
+        lastArea = isMetric ? area_m2.toFixed(1) : (area_m2 * (M_TO_FT**2)).toFixed(1);
+        lastVol = isMetric ? vol_m3.toFixed(1) : (vol_m3 * (M_TO_FT**3)).toFixed(1);
+
+        document.getElementById('areaVal').innerText = lastArea;
+        document.getElementById('totalUnits').innerText = units.length;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#e0e0e0';
+        for(let i=0; i<canvas.width; i+=baseScale) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+        for(let i=0; i<canvas.height; i+=baseScale) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
+
+        // V7 Drawing Logic
+        if(points.length > 0) {
+            ctx.beginPath(); ctx.strokeStyle = '#1a73e8'; ctx.lineWidth = 3;
+            ctx.moveTo(points[0].x*baseScale+origin.x, points[0].y*baseScale+origin.y);
+            for(let i=1; i < points.length; i++) {
+                ctx.lineTo(points[i].x * baseScale + origin.x, points[i].y * baseScale + origin.y);
+                let d = Math.hypot(points[i].x - points[i-1].x, points[i].y - points[i-1].y);
+                ctx.fillStyle = "#444"; ctx.font = "bold 11px sans-serif";
+                ctx.fillText((isMetric ? d : d * M_TO_FT).toFixed(1) + (isMetric?"m":"ft"), (points[i-1].x + points[i].x)/2 * baseScale + origin.x + 8, (points[i-1].y + points[i].y)/2 * baseScale + origin.y - 8);
+            }
+            if(isClosed) {
+                ctx.closePath(); ctx.fillStyle = 'rgba(26, 115, 232, 0.04)'; ctx.fill();
+            } else if (mode === 'draw') {
+                ctx.lineTo(mousePos.x, mousePos.y);
+                let last = points[points.length-1], dx = (mousePos.x - origin.x)/baseScale - last.x, dy = (mousePos.y - origin.y)/baseScale - last.y;
+                let d = Math.hypot(dx, dy), angle = Math.atan2(dy, dx) * (180/Math.PI);
+                ctx.fillStyle = "#ff5722"; ctx.fillText(`${(isMetric?d:d*M_TO_FT).toFixed(1)}${isMetric?"m":"ft"} | ${angle.toFixed(0)}°`, mousePos.x + 12, mousePos.y - 12);
+            }
+            ctx.stroke();
+        }
+
+        occupants.forEach(occ => {
+            if(speed_ms > 0) {
+                if(Math.random() < 0.05) occ.angle += (Math.random() - 0.5) * 1.5;
+                occ.x += Math.cos(occ.angle) * (speed_ms / 60);
+                occ.y += Math.sin(occ.angle) * (speed_ms / 60);
+                if(!isInside({x: occ.x, y: occ.y}, points)) { occ.angle += Math.PI; }
+            }
+            ctx.fillStyle = '#e53e3e'; ctx.beginPath(); ctx.arc(occ.x*baseScale+origin.x, occ.y*baseScale+origin.y, 6, 0, Math.PI*2); ctx.fill();
+        });
+
+        let actS6 = 0; let totalUR_EACH = 0;
+        units.forEach(u => {
+            ctx.save(); ctx.beginPath(); points.forEach(pt => ctx.lineTo(pt.x*baseScale+origin.x, pt.y*baseScale+origin.y)); ctx.closePath(); ctx.clip();
+            if(u.type === 'S6') {
+                let deactivated = occupants.some(occ => Math.hypot(occ.x - u.x, occ.y - u.y) < h_m);
+                ctx.beginPath(); ctx.arc(u.x*baseScale+origin.x, u.y*baseScale+origin.y, h_m*baseScale, 0, Math.PI*2);
+                if(deactivated) { ctx.fillStyle = 'rgba(150, 150, 150, 0.2)'; }
+                else { ctx.fillStyle = 'rgba(106, 27, 154, 0.2)'; actS6++; }
+                ctx.fill(); ctx.fillStyle = deactivated ? '#888' : '#6a1b9a';
+            } else {
+                let grad = ctx.createRadialGradient(u.x*baseScale+origin.x, u.y*baseScale+origin.y, 1, u.x*baseScale+origin.x, u.y*baseScale+origin.y, 6*baseScale);
+                grad.addColorStop(0, 'rgba(26, 115, 232, 0.3)'); grad.addColorStop(1, 'rgba(26, 115, 232, 0)');
+                ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(u.x*baseScale+origin.x, u.y*baseScale+origin.y, 6*baseScale, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#1a73e8';
+                if(vol_m3 > 0) {
+                    let steps = 20, dr = (6 - 0.06)/steps, integral = 0;
+                    for(let i=0; i<steps; i++) {
+                        let r = 0.06 + i*dr;
+                        integral += (2*Math.PI*vb/vol_m3) * (1 - Math.exp(-(kappa*pUR)/(2*Math.PI*vb*r))) * r * dr;
+                    }
+                    totalUR_EACH += (integral * 3600);
+                }
+            }
+            ctx.beginPath(); ctx.arc(u.x*baseScale+origin.x, u.y*baseScale+origin.y, 7, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        });
+
+        let s6_EACH = (vol_m3 > 0) ? (actS6 * g_m3s / vol_m3) * (1 - Math.exp(-kappa * (pS6 * h_m / g_m3s))) * 3600 : 0;
+        let totalEACH = totalUR_EACH + s6_EACH;
+
+        lastUR_Val = totalUR_EACH;
+        lastS6_Val = s6_EACH;
+        lastTotalEACH = totalEACH;
+
+        document.getElementById('val_ur').innerText = totalUR_EACH.toFixed(2);
+        document.getElementById('val_s6').innerText = s6_EACH.toFixed(2);
+        document.getElementById('eachVal').innerText = totalEACH.toFixed(2);
+        eachHistory.push(totalEACH); if(eachHistory.length > 300) eachHistory.shift();
+        document.getElementById('avgEach').innerText = (eachHistory.reduce((a,b)=>a+b,0)/eachHistory.length).toFixed(2);
+
+        // 0-100 Scale Bar Logic
+        const bar = document.getElementById('perfBar');
+        const maxVal = 100; // Fixed max 100
+        const pct = Math.min((totalEACH / maxVal) * 100, 100);
+        bar.style.width = pct + '%';
+
+        const color = getBarColor(totalEACH);
+        bar.style.backgroundColor = color;
+        document.getElementById('eachVal').style.color = color;
+
+        requestAnimationFrame(updateSim);
+    }
+
+    canvas.width = 1000; canvas.height = 700;
+    canvas.onmousedown = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = (e.clientX - rect.left - origin.x) / baseScale, my = (e.clientY - rect.top - origin.y) / baseScale;
+        if(mode === 'draw' && !isClosed) { if(points.length > 2 && Math.hypot(points[0].x-mx, points[0].y-my) < 0.4) { isClosed = true; initOccupants(); } else points.push({x:mx, y:my}); }
+        else if(mode === 'unit' && isClosed) { units.push({x:mx, y:my, type: 'S6'}); }
+        updateSim();
+    };
+    canvas.onmousemove = (e) => { const rect = canvas.getBoundingClientRect(); mousePos.x = e.clientX - rect.left; mousePos.y = e.clientY - rect.top; };
+    canvas.oncontextmenu = (e) => { e.preventDefault(); const rect = canvas.getBoundingClientRect(); const mx = (e.clientX - rect.left - origin.x)/baseScale, my = (e.clientY - rect.top - origin.y)/baseScale; units = units.filter(u => Math.hypot(u.x-mx, u.y-my) > 0.5); updateSim(); };
+    updateSim();
+</script>
+</body>
+</html>

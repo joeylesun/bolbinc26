@@ -11,6 +11,6 @@ SUVOS_System/
 ├── step3_run_system.py      <-- Backend (YOLO + WebSocket + Hardware Logic)
 │
 └── interface/
-    ├── index.html           <-- Frontend ()
+    ├── index.html           <-- Frontend (SUVOS unified eACH_V18.html)
     ├── assets/              <-- (Images for the offline mode)
 ```

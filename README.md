@@ -2,17 +2,27 @@
 ```
 SUVOS_System/
 │
-├── suvos_utils.py           <-- The Shared Library (Paths, Logging, Vector Math)
+├── config/                  <-- Stores all JSONs and Reference Images
+│   ├── dynamic_zones.json   <-- (From Step 1)
+│   └── ref_bump_frame.jpg   <-- (NEW: For Bump Detection)
 │
-├── step1_calibrate_dual.py  <-- The Map Maker and Camera Calibration (Demo_dual_camera_calibration.py)
+├── suvos_utils.py           <-- The "spine" connecting everything
 │
-├── step2_validate_tool.py   <-- Quick calibration Check (Demo_dual_camera_validation.py)
+├── step1_calibrate_dual.py  <-- [Source: Demo_dual_camera_calibration.py]
+│                                TODO: Saves 'ref_bump_frame.jpg' when done.
 │
-├── step3_run_system.py      <-- Backend (YOLO + WebSocket + Hardware Logic). Yolo and Hardware Logic are implemented in Demo_dual_camera_detection.py
+├── step2_validate_tool.py   <-- [Source: Dual_camera_validation.py]
+│                                TODO: Uses suvos_utils to load zones.
+│
+├── step3_run_system.py      <-- [Source: Demo_dual_camera_detection.py]
+│                                + Integrated: YOLO Loop
+│                                + Integrated: Hardware/Relay Logic
+│                                + TODO: WebSocket Server
+│                                + TODO: Camera Bump Check 
 │
 └── interface/
-    ├── index.html           <-- Frontend (SUVOS unified eACH_V18.html)
-    ├── assets/              <-- (Images for the offline mode)
+    ├── index.html           <-- [Source: SUVOS unified eACH_V18.html]
+    │                            + TODO: Listen for WebSocket JSON
+    └── assets/
 ```
 
-TODO:

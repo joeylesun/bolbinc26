@@ -18,11 +18,11 @@ SUVOS_System/
 │                                + Integrated: YOLO Loop
 │                                + Integrated: Hardware/Relay Logic
 │                                + TODO: WebSocket Server
-│                                + TODO: Camera Bump Check 
+│                                + TODO: Camera Bump Check (YOLO_self_check.py)
 │
 └── interface/
     ├── index.html           <-- [Source: SUVOS unified eACH_V18.html]
-    │                            + TODO: Listen for WebSocket JSON
+    │                            + TODO: Listen for WebSocket JSON for the live update 2D visualization
     └── assets/
 ```
 

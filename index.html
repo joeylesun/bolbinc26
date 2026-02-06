@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SUVOS Unified Monitor v45.0</title>
+    <style>
+        /* CLINICAL THEME */
+        :root {
+            --bg: #f0f2f5;
+            --panel: #ffffff;
+            --accent: #1a73e8; /* Professional Blue */
+            --danger: #d93025;
+            --success: #188038;
+            --text: #333;
+            --border: #ddd;
+        }
+
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+
+        /* LEFT SIDEBAR */
+        .sidebar { width: 350px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.05); }
+
+        h2 { margin: 0 0 20px 0; font-size: 1.4rem; color: var(--accent); border-bottom: 2px solid #e8f0fe; padding-bottom: 10px; }
+
+        .card { background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .card-title { font-size: 0.8rem; font-weight: 700; color: #666; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+
+        .metric-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .metric-val { font-weight: 700; font-size: 1.1rem; }
+
+        /* CONNECTION STATUS */
+        #conn-bar { padding: 10px; border-radius: 6px; font-weight: bold; text-align: center; margin-bottom: 20px; font-size: 0.9rem; }
+        .status-ok { background: #e6fffa; color: #047857; border: 1px solid #a7f3d0; }
+        .status-err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+        /* LOGS */
+        #log { flex-grow: 1; background: #1e1e1e; color: #0f0; font-family: monospace; font-size: 0.8rem; padding: 10px; border-radius: 6px; overflow-y: auto; }
+        .log-line { margin-bottom: 2px; }
+
+        /* RIGHT MAIN VIEW */
+        .main-view { flex-grow: 1; position: relative; background: #e5e5e5; display: flex; align-items: center; justify-content: center; }
+
+        canvas { background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border-radius: 4px; }
+
+        .legend { position: absolute; bottom: 20px; right: 20px; background: rgba(255,255,255,0.9); padding: 10px 20px; border-radius: 30px; display: flex; gap: 15px; font-size: 0.85rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>SUVOS MONITOR</h2>
+    <div id="conn-bar" class="status-err">CONNECTING...</div>
+
+    <div class="card">
+        <div class="card-title">Live Telemetry</div>
+        <div class="metric-row">
+            <span>Occupants:</span>
+            <span class="metric-val" style="color: var(--danger);" id="val-people">0</span>
+        </div>
+        <div class="metric-row">
+            <span>Sanitizing Units:</span>
+            <span class="metric-val" style="color: var(--success);" id="val-cleaning">0</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Room Geometry</div>
+        <div class="metric-row">
+            <span>Total Units:</span>
+            <span class="metric-val" id="val-units">0</span>
+        </div>
+        <div class="metric-row">
+            <span>Scale:</span>
+            <span class="metric-val" id="val-scale">--</span>
+        </div>
+    </div>
+
+    <div id="log"></div>
+</div>
+
+<div class="main-view">
+    <canvas id="canvas"></canvas>
+
+    <div class="legend">
+        <div><span class="dot" style="background:var(--danger)"></span>Person</div>
+        <div><span class="dot" style="background:var(--accent)"></span>Wait</div>
+        <div><span class="dot" style="background:var(--success)"></span>Clean</div>
+    </div>
+</div>
+
+<script>
+    // === CONFIGURATION ===
+    const WS_URL = "ws://localhost:8765";
+    const IMG_SRC = "assets/room_map.png";
+
+    // === STATE ===
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let mapImg = new Image();
+    let mapLoaded = false;
+
+    // Config loaded from Backend
+    let MAP_CFG = { scale: 1.0, off_x: 0, off_y: 0, map_size: 800 };
+    let ROOM_SHAPE = []; // Polished polygon
+    let STATIC_ZONES = []; // Fixed positions
+
+    // Live Data
+    let livePeople = [];
+    let liveZoneStates = {}; // ID -> Status
+
+    // === INIT ===
+    canvas.width = 1000; canvas.height = 800;
+
+    mapImg.src = IMG_SRC;
+    mapImg.onload = () => {
+        mapLoaded = true;
+        log("Background Map Loaded.");
+        drawFrame();
+    };
+
+    // === RECTIFICATION ALGORITHM (The "Polish") ===
+    function rectifyPoly(points) {
+        if (!points || points.length < 3) return points || [];
+
+        let rect = JSON.parse(JSON.stringify(points)); // Deep copy
+        const SNAP = 0.5; // Snap threshold (meters)
+
+        for(let i=1; i<rect.length; i++) {
+            let prev = rect[i-1];
+            let curr = rect[i];
+            let dx = Math.abs(curr.x - prev.x);
+            let dy = Math.abs(curr.y - prev.y);
+
+            // If line is mostly vertical, make it perfectly vertical
+            if (dx < SNAP && dy > dx) curr.x = prev.x;
+            // If line is mostly horizontal, make it perfectly horizontal
+            else if (dy < SNAP && dx > dy) curr.y = prev.y;
+        }
+
+        // Close loop neatly
+        let first = rect[0];
+        let last = rect[rect.length-1];
+        if(Math.abs(last.x - first.x) < SNAP) last.x = first.x;
+        if(Math.abs(last.y - first.y) < SNAP) last.y = first.y;
+
+        return rect;
+    }
+
+    // === NETWORKING ===
+    function connect() {
+        const ws = new WebSocket(WS_URL);
+        const bar = document.getElementById('conn-bar');
+
+        ws.onopen = () => {
+            bar.innerText = "SYSTEM ONLINE";
+            bar.className = "status-ok";
+            log("WebSocket Connected.");
+        };
+
+        ws.onclose = () => {
+            bar.innerText = "DISCONNECTED - RETRYING";
+            bar.className = "status-err";
+            setTimeout(connect, 2000);
+        };
+
+        ws.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                handlePacket(data);
+            } catch(err) { console.error(err); }
+        };
+    }
+
+    function handlePacket(data) {
+        // 1. INITIAL CONFIG (Golden Handshake)
+        if (data.type === "INIT_CONFIG") {
+            MAP_CFG = data.config;
+            STATIC_ZONES = data.fixed_zones || [];
+
+            // POLISH THE ROOM SHAPE ON LOAD
+            let rawShape = data.room_shape || [];
+            ROOM_SHAPE = rectifyPoly(rawShape);
+
+            // Update UI
+            document.getElementById('val-units').innerText = STATIC_ZONES.length;
+            document.getElementById('val-scale').innerText = MAP_CFG.scale.toFixed(2) + " px/m";
+            log(`Loaded Config. Room: ${ROOM_SHAPE.length} pts, Zones: ${STATIC_ZONES.length}`);
+
+            drawFrame(); // Force redraw static elements
+        }
+
+        // 2. LIVE UPDATES
+        if (data.type === "TRACKING_UPDATE") {
+            livePeople = data.people || [];
+
+            if (data.z_states) {
+                data.z_states.forEach(z => { liveZoneStates[z.id] = z.s; });
+            }
+
+            // Update Stats
+            document.getElementById('val-people').innerText = livePeople.length;
+            let active = Object.values(liveZoneStates).filter(s => s === 'CLEAN').length;
+            document.getElementById('val-cleaning').innerText = active;
+
+            requestAnimationFrame(drawFrame);
+        }
+    }
+
+    // === DRAWING ENGINE ===
+    function drawFrame() {
+        // Clear background
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0,0,canvas.width, canvas.height);
+
+        // Helper: Meters -> Pixels
+        const toScreen = (wx, wy) => {
+            let mx = (wx - MAP_CFG.off_x) * MAP_CFG.scale;
+            let my = MAP_CFG.map_size - ((wy - MAP_CFG.off_y) * MAP_CFG.scale);
+            const sz = MAP_CFG.map_size || 800;
+            // Center on canvas
+            return { x: mx + (canvas.width-sz)/2, y: my + (canvas.height-sz)/2 };
+        }
+
+        // 1. Draw Background Image (Optional - Comment out if you want PURE grid look)
+        /*
+        if(mapLoaded) {
+            const sz = MAP_CFG.map_size || 800;
+            const ox = (canvas.width - sz)/2;
+            const oy = (canvas.height - sz)/2;
+            ctx.save();
+            ctx.globalAlpha = 0.3; // Make background image faint
+            ctx.drawImage(mapImg, ox, oy, sz, sz);
+            ctx.restore();
+        }
+        */
+
+        // 2. Draw Room Shape WITH Grid (Reproducing the style)
+        if(ROOM_SHAPE.length > 0) {
+            ctx.save();
+
+            // Define Path
+            ctx.beginPath();
+            let start = toScreen(ROOM_SHAPE[0].x, ROOM_SHAPE[0].y);
+            ctx.moveTo(start.x, start.y);
+            for(let i=1; i<ROOM_SHAPE.length; i++) {
+                let p = toScreen(ROOM_SHAPE[i].x, ROOM_SHAPE[i].y);
+                ctx.lineTo(p.x, p.y);
+            }
+            ctx.closePath();
+
+            // A. FILL WITH WHITE
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            // B. CLIP TO ROOM SHAPE (So grid only draws inside)
+            ctx.clip();
+
+            // C. DRAW GRID
+            drawGrid(ctx);
+
+            ctx.restore(); // Stop clipping
+
+            // D. DRAW BLUE OUTLINE ON TOP
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            for(let i=1; i<ROOM_SHAPE.length; i++) {
+                let p = toScreen(ROOM_SHAPE[i].x, ROOM_SHAPE[i].y);
+                ctx.lineTo(p.x, p.y);
+            }
+            ctx.closePath();
+
+            ctx.lineWidth = 2; // Match the thin blue line style
+            ctx.strokeStyle = "#4a90e2"; // Specific blue from your image
+            ctx.stroke();
+        }
+
+        // 3. Draw Zones
+        STATIC_ZONES.forEach(z => {
+            let pos = toScreen(z.x, z.y);
+            let state = liveZoneStates[z.id] || "WAIT";
+
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 20, 0, Math.PI*2); // Radius
+
+            if (state === "CLEAN") {
+                ctx.fillStyle = "rgba(24, 128, 56, 0.3)"; ctx.strokeStyle = "#188038";
+            } else if (state === "WAIT") {
+                ctx.fillStyle = "rgba(26, 115, 232, 0.1)"; ctx.strokeStyle = "#1a73e8";
+            } else {
+                ctx.fillStyle = "rgba(100, 100, 100, 0.1)"; ctx.strokeStyle = "#999";
+            }
+            ctx.fill(); ctx.stroke();
+
+            // Text Label
+            ctx.fillStyle = "#333"; ctx.font = "bold 10px Arial"; ctx.textAlign="center";
+            ctx.fillText("S"+z.id, pos.x, pos.y+4);
+        });
+
+        // 4. Draw People
+        livePeople.forEach(p => {
+            let pos = toScreen(p.x, p.y);
+
+            // Red Halo
+            ctx.beginPath(); ctx.arc(pos.x, pos.y, 8, 0, Math.PI*2);
+            ctx.fillStyle = "rgba(217, 48, 37, 0.2)"; ctx.fill();
+
+            // Red Dot
+            ctx.beginPath(); ctx.arc(pos.x, pos.y, 4, 0, Math.PI*2);
+            ctx.fillStyle = "#d93025"; ctx.fill();
+        });
+    }
+
+    // Helper: Draws Grid Lines
+    function drawGrid(ctx) {
+        ctx.strokeStyle = "#e0e0e0"; // Very light grey
+        ctx.lineWidth = 1;
+
+        const sz = MAP_CFG.map_size || 800;
+        const step = MAP_CFG.scale; // 1 Meter Step (assuming scale is pixels per meter)
+
+        // Calculate offsets to center grid
+        const ox = (canvas.width - sz)/2;
+        const oy = (canvas.height - sz)/2;
+
+        ctx.beginPath();
+
+        // Draw Vertical Lines
+        for(let x = 0; x <= sz; x += step) {
+            ctx.moveTo(ox + x, oy);
+            ctx.lineTo(ox + x, oy + sz);
+        }
+
+        // Draw Horizontal Lines
+        for(let y = 0; y <= sz; y += step) {
+            ctx.moveTo(ox, oy + y);
+            ctx.lineTo(ox + sz, oy + y);
+        }
+
+        ctx.stroke();
+    }
+
+    function log(msg) {
+        const div = document.getElementById('log');
+        const line = document.createElement('div');
+        line.className = "log-line";
+        line.innerText = "> " + msg;
+        div.prepend(line);
+        if(div.children.length > 20) div.lastChild.remove();
+    }
+
+    // Start
+    connect();
+
+</script>
+</body>
+</html>

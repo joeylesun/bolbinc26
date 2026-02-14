@@ -9,3 +9,11 @@ yolov8n.pt: The YOLO model weights.
 calibration_data_cam0.npz: Camera calibration matrix.
 
 led_zones.json & room_shape.json: Configuration files for zones and room geometry.
+
+The Build Process
+```
+rm -rf build dist
+pyinstaller --noconfirm --clean SUVOS.spec
+xattr -cr dist/SUVOS_Monitor.app
+codesign --force --deep --sign - "dist/SUVOS_Monitor.app"
+```

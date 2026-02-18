@@ -1,0 +1,8 @@
+numpy<2.0
+opencv-python<4.10
+ultralytics
+websockets
+pyserial
+open3d
+Pillow
+pyinstaller

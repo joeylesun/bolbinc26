@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+backend/__pycache__/
+backend/dist/
+backend/build/
+*.pyc
+.vscode/
+.DS_Store

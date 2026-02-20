@@ -1,0 +1,31 @@
+{
+  "name": "suvos-desktop",
+  "productName": "SUVOS Desktop",
+  "version": "0.1.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-backend": "cd backend && pyinstaller SUVOS_Monitor.spec && cd .. && mkdir -p build && cp backend/dist/backend* build/ || true",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "^26.0.0",
+    "electron-builder": "^24.6.0"
+  },
+  "build": {
+    "appId": "com.yourcompany.suvos",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "build/**/*"
+    ],
+    "extraResources": [
+      { "from": "build/", "to": "bin/", "filter": ["**/*"] }
+    ],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": ["AppImage", "deb"] }
+  }
+}

@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SUVOS 6 - DUAL MODE 3D SIMULATION</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg: #ffffff; --panel: #f9fafb; --border: #e5e7eb;
+            --c-human: #1e3a8a;
+            --c-wall: #2563eb;
+            --c-conal: #d63384;   /* Magenta (Empty/Downward) */
+            --c-radial: #0bc5ea;  /* Cyan (Occupied/Upper Room) */
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; color: #111; }
+
+        /* === LEFT SIDEBAR === */
+        .sidebar { width: 380px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-shadow: 4px 0 15px rgba(0,0,0,0.02); z-index: 10; overflow-y: auto; }
+        h2 { margin: 0 0 15px 0; color: var(--c-wall); border-bottom: 2px solid var(--c-wall); padding-bottom: 10px; font-size: 1.4rem; font-weight: 800; }
+
+        .status-badge { text-align:center; padding:8px; margin-bottom:15px; font-weight:700; font-size:0.75rem; border-radius:4px; background:#dcfce7; color:#166534; }
+
+        /* Main Output Box */
+        #result-box { margin-bottom: 15px; padding: 15px; border-radius: 8px; border-left: 6px solid var(--c-wall); background: #f0f9ff; }
+        .split-metric { display: flex; justify-content: space-between; font-size: 0.9em; margin-top: 5px; padding: 4px 0; border-bottom: 1px dashed #ddd; font-weight: 600; }
+        .conal-accent { color: var(--c-conal); }
+        .radial-accent { color: var(--c-radial); }
+
+        .each-display { font-weight: 800; margin-top:12px; font-size: 1.6em; color: #333; text-align: center; }
+
+        /* Progress Bar */
+        .perf-track { width: 100%; height: 16px; background: #e2e8f0; border-radius: 8px; margin-top: 15px; overflow: hidden; border: 1px solid #ccc; position: relative; }
+        .perf-bar { height: 100%; width: 0%; transition: width 0.2s ease-out, background-color 0.2s ease; }
+        .target-line { position: absolute; left: 12%; top: 0; bottom: 0; width: 2px; background: #222; z-index: 5; box-shadow: 1px 0 2px rgba(0,0,0,0.3); }
+        .perf-label { font-size: 0.75em; color: #666; position: relative; height: 20px; margin-top: 4px; font-weight: 600; }
+        .lbl { position: absolute; transform: translateX(-50%); }
+
+        /* Hardware Dashboard */
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; overflow-y: auto; max-height: 250px; margin-bottom: 15px; padding-right: 5px;}
+        .dash-grid::-webkit-scrollbar { width: 6px; }
+        .dash-grid::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        .zone-card { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 8px; text-align: center; }
+        .zone-id { font-size: 0.85rem; font-weight: 800; margin-bottom: 4px; color: #333; }
+        .zone-state { font-size: 0.75rem; font-weight: 700; padding: 3px 6px; border-radius: 4px; color: #fff; text-transform: uppercase; display: inline-block; }
+
+        /* Hidden Engineering Section */
+        .engineering-toggle { width: 100%; padding: 10px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; margin-bottom: 10px; color: #4a5568; transition: background 0.2s;}
+        .engineering-toggle:hover { background: #cbd5e0; }
+
+        #engineering-panel { display: none; margin-top: 10px; border-top: 1px solid #ddd; padding-top: 10px; }
+        .section-title { font-size: 0.8em; font-weight: bold; color: #555; margin: 10px 0 5px 0; text-transform: uppercase; }
+        .input-group { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .input-group label { font-size: 0.8em; font-weight: 600; color: #444; }
+        .input-group input, .input-group select { width: 45%; padding: 6px; border: 1px solid #ccd; border-radius: 4px; box-sizing: border-box; font-size: 0.85em; }
+        .equation-box { background: #1a1a1a; color: #fff; padding: 10px; border-radius: 8px; margin-top: 15px; text-align: left; font-size:0.8em; overflow-x: auto;}
+
+        /* === RIGHT SIDEBAR (3D View) === */
+        .main-view { flex-grow: 1; position: relative; background: #222; } /* Darkened background behind room */
+        canvas { display: block; width: 100%; height: 100%; outline: none; }
+
+        .btn-cinematic { position: absolute; top: 20px; right: 20px; background: var(--c-wall); color: white; padding: 8px 16px; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 5; }
+        .overlay-instruction { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; pointer-events: none; z-index: 5; }
+
+        .legend { position: absolute; bottom: 20px; right: 20px; background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 20px; display: flex; gap: 12px; border: 1px solid #ddd; font-size: 0.75rem; font-weight: 600; pointer-events: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); z-index: 5; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>SUVOS DUAL SYSTEM</h2>
+    <div class="status-badge">LIVE 3D DIGITAL TWIN</div>
+
+    <div id="result-box">
+        <div style="font-size: 0.85em; display:flex; justify-content:space-between; margin-bottom: 10px; color:#555; font-weight:bold;">
+            <span>Room Area: <span style="color:#000;">500 m²</span></span>
+            <span>Active Units: <span style="color:#000;">20</span></span>
+        </div>
+
+        <div class="split-metric conal-accent">
+            <span>1. Conal Mode (Empty):</span> <span id="val_s6_mode">0.00</span>
+        </div>
+        <div class="split-metric radial-accent">
+            <span>2. Radial Mode (Occupied):</span> <span id="val_ur_mode">0.00</span>
+        </div>
+
+        <div class="each-display">
+            UNIFIED R(t): <span id="eachVal">0.00</span>
+        </div>
+
+        <div class="perf-track">
+            <div class="target-line" title="Clinical Target (12 eACH)"></div>
+            <div id="perfBar" class="perf-bar"></div>
+        </div>
+        <div class="perf-label">
+            <span class="lbl" style="left:0%">0</span>
+            <span class="lbl" style="left:12%; color:#222; font-weight:bold;">12</span>
+            <span class="lbl" style="left:50%">50</span>
+            <span class="lbl" style="left:100%">100+</span>
+        </div>
+    </div>
+
+    <div class="section-title">Live Hardware Status</div>
+    <div class="dash-grid" id="zone-grid"></div>
+
+    <button class="engineering-toggle" onclick="toggleEngineering()">⚙️ Toggle Engineering Parameters</button>
+
+    <div id="engineering-panel">
+        <div class="section-title">Pathogen Settings</div>
+        <div class="input-group">
+            <label>Target (κ) [m²/J]</label>
+            <select id="virus" onchange="updateSimMath()">
+                <option value="0.350">SARS-CoV-2 (0.350)</option>
+                <option value="0.110">Measles (0.110)</option>
+                <option value="0.080">Influenza A (0.080)</option>
+                <option value="0.060">Tuberculosis (0.060)</option>
+            </select>
+        </div>
+
+        <div class="section-title conal-accent">Conal Mode Physics</div>
+        <div class="input-group">
+            <label>Airflow G [m³/s]</label>
+            <input type="number" id="gVal" value="6.0" step="0.5" onchange="updateSimMath()">
+        </div>
+        <div class="input-group">
+            <label>Optical Power P [W]</label>
+            <input type="number" id="pS6" value="0.6" step="0.1" onchange="updateSimMath()">
+        </div>
+
+        <div class="section-title radial-accent">Radial Mode Physics</div>
+        <div class="input-group">
+            <label>Convection vB [m/s]</label>
+            <input type="number" id="vbVal" value="0.1" step="0.01" onchange="updateSimMath()">
+        </div>
+        <div class="input-group">
+            <label>Optical Power P [W]</label>
+            <input type="number" id="pUR" value="0.4" step="0.1" onchange="updateSimMath()">
+        </div>
+
+        <div class="equation-box">
+            \[ R_{total}(t) = R_{Radial} + R_{Conal} \]
+        </div>
+    </div>
+</div>
+
+<div class="main-view" id="canvas-container">
+    <button id="btn-cinematic" class="btn-cinematic" onclick="toggleCinematic()">CINEMATIC ORBIT: OFF</button>
+    <div class="overlay-instruction">🖱️ Left Click: Rotate | Right Click: Pan | Scroll: Zoom</div>
+    <div class="legend">
+        <div><span class="dot" style="background:var(--c-human)"></span>Human</div>
+        <div><span class="dot" style="background:var(--c-conal)"></span>Conal Disinfection</div>
+        <div><span class="dot" style="background:var(--c-radial)"></span>Upper Room Disinfection</div>
+    </div>
+</div>
+
+<script>
+    // === UI LOGIC ===
+    function toggleEngineering() {
+        const panel = document.getElementById('engineering-panel');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function getBarColor(val) {
+        if(val < 3) return '#ff4444';
+        if(val < 6) return '#ffaa00';
+        if(val < 12) return '#d4d900';
+        if(val < 30) return '#38a169';
+        if(val < 60) return '#2f855a';
+        return '#0bc5ea';
+    }
+
+    // === 1. SIMULATION LOGIC ===
+    const ROOM_X = 25;
+    const ROOM_Z = 20;
+    const ROOM_HEIGHT = 6.0;
+
+    const SIM_ZONES = [];
+    let z_id = 0;
+    for(let z of [-7.5, -2.5, 2.5, 7.5]) {
+        for(let x of [-10, -5, 0, 5, 10]) {
+            SIM_ZONES.push({ id: z_id++, x: x, z: z, radius: 3.0, occupied: false });
+        }
+    }
+
+    class Person {
+        constructor(id) {
+            this.id = id;
+            this.x = (Math.random() - 0.5) * (ROOM_X - 1);
+            this.z = (Math.random() - 0.5) * (ROOM_Z - 1);
+            this.speed = 1.0 + Math.random() * 0.8;
+            this.pickTarget();
+        }
+        pickTarget() {
+            this.tx = (Math.random() - 0.5) * (ROOM_X - 1);
+            this.tz = (Math.random() - 0.5) * (ROOM_Z - 1);
+        }
+        update(dt) {
+            let dx = this.tx - this.x;
+            let dz = this.tz - this.z;
+            let dist = Math.hypot(dx, dz);
+            if (dist < 0.2) this.pickTarget();
+            else {
+                this.x += (dx/dist) * this.speed * dt;
+                this.z += (dz/dist) * this.speed * dt;
+            }
+        }
+    }
+    const PEOPLE = Array.from({length: 15}, (_, i) => new Person(i));
+
+    // Calculate eACH (MATH 100% UNCHANGED)
+    function updateSimMath() {
+        const vol_m3 = (ROOM_X * ROOM_Z) * ROOM_HEIGHT;
+        const g_m3s = parseFloat(document.getElementById('gVal').value);
+        const pS6 = parseFloat(document.getElementById('pS6').value);
+        const pUR = parseFloat(document.getElementById('pUR').value);
+        const vbVal = parseFloat(document.getElementById('vbVal').value);
+        const kappa = parseFloat(document.getElementById('virus').value);
+
+        let countActS6Mode = 0;
+        let countActUrMode = 0;
+
+        SIM_ZONES.forEach(z => {
+            if(z.occupied) countActUrMode++; else countActS6Mode++;
+        });
+
+        let s6Mode_EACH = (vol_m3 > 0) ? (countActS6Mode * g_m3s / vol_m3) * (1 - Math.exp(-kappa * (pS6 * ROOM_HEIGHT / g_m3s))) * 3600 : 0;
+        let totalUrMode_EACH = 0;
+
+        if(vol_m3 > 0 && countActUrMode > 0) {
+            let steps = 20, dr = (6 - 0.06)/steps, integral = 0;
+            for(let i=0; i<steps; i++) {
+                let r = 0.06 + i*dr;
+                integral += (2*Math.PI*vbVal/vol_m3) * (1 - Math.exp(-(kappa*pUR)/(2*Math.PI*vbVal*r))) * r * dr;
+            }
+            totalUrMode_EACH = (integral * 3600) * countActUrMode;
+        }
+
+        let totalEACH = totalUrMode_EACH + s6Mode_EACH;
+
+        document.getElementById('val_s6_mode').innerText = s6Mode_EACH.toFixed(2);
+        document.getElementById('val_ur_mode').innerText = totalUrMode_EACH.toFixed(2);
+        document.getElementById('eachVal').innerText = totalEACH.toFixed(2);
+
+        const bar = document.getElementById('perfBar');
+        const pct = Math.min((totalEACH / 100) * 100, 100);
+        bar.style.width = pct + '%';
+        const color = getBarColor(totalEACH);
+        bar.style.backgroundColor = color;
+        document.getElementById('eachVal').style.color = color;
+    }
+
+    function initDashboard() {
+        const g = document.getElementById('zone-grid'); g.innerHTML = "";
+        SIM_ZONES.forEach(z => {
+            let d = document.createElement('div'); d.className="zone-card"; d.id=`card-${z.id}`;
+            d.innerHTML = `<div class="zone-id">SUVOS ${z.id}</div><div class="zone-state" id="s-${z.id}">INIT</div>`;
+            g.appendChild(d);
+        });
+    }
+
+    function updateDashboard() {
+        SIM_ZONES.forEach(z => {
+            let sEl = document.getElementById(`s-${z.id}`);
+            let cEl = document.getElementById(`card-${z.id}`);
+            if (z.occupied) {
+                sEl.innerText = "RADIAL MODE";
+                sEl.style.background = "var(--c-radial)";
+                cEl.style.borderColor = "var(--c-radial)";
+            } else {
+                sEl.innerText = "CONAL MODE";
+                sEl.style.background = "var(--c-conal)";
+                cEl.style.borderColor = "var(--border)";
+            }
+        });
+    }
+
+    // === 2. THREE.JS SCENE SETUP ===
+    const HEX_COLORS = { human: 0x1e3a8a, conal: 0xd63384, radial: 0x0bc5ea };
+
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    // Use a slightly darker background to make the real lights pop
+    scene.background = new THREE.Color(0xf0f2f5);
+
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 38, 35);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    // 🌟 ENABLE SHADOWS ON RENDERER
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+    // Dim the ambient light so spotlights are visible
+    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+
+    // 🌟 MAIN GLOBAL LIGHT (Casts crisp shadows for humans)
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    dirLight.position.set(15, 30, 15);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.left = -20;
+    dirLight.shadow.camera.right = 20;
+    dirLight.shadow.camera.top = 20;
+    dirLight.shadow.camera.bottom = -20;
+    scene.add(dirLight);
+
+    const zoneMeshes = {};
+    const humanMeshes = [];
+
+    let isCinematic = false;
+    function toggleCinematic() {
+        isCinematic = !isCinematic;
+        controls.autoRotate = isCinematic;
+        controls.autoRotateSpeed = 1.0;
+        const btn = document.getElementById('btn-cinematic');
+        btn.innerText = "CINEMATIC ORBIT: " + (isCinematic ? "ON" : "OFF");
+        btn.style.background = isCinematic ? "var(--c-radial)" : "var(--c-wall)";
+    }
+
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    function build3DRoom() {
+        // 🌟 SOLID FLOOR (Receives realistic shadows and light pools)
+        const floorGeo = new THREE.PlaneGeometry(ROOM_X, ROOM_Z);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.8, metalness: 0.1 });
+        const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+        floorMesh.rotation.x = -Math.PI / 2;
+        floorMesh.receiveShadow = true; // Enables human shadows
+        scene.add(floorMesh);
+
+        // Add a subtle grid on top of the floor
+        const gridHelper = new THREE.GridHelper(Math.max(ROOM_X, ROOM_Z), Math.max(ROOM_X, ROOM_Z), 0x999999, 0xbbbbbb);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
+
+        // 🌟 GLASS CEILING (Lets camera see inside, but defines the volume)
+        const ceilGeo = new THREE.PlaneGeometry(ROOM_X, ROOM_Z);
+        const ceilMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.1, side: THREE.DoubleSide });
+        const ceilMesh = new THREE.Mesh(ceilGeo, ceilMat);
+        ceilMesh.rotation.x = Math.PI / 2;
+        ceilMesh.position.y = ROOM_HEIGHT;
+        scene.add(ceilMesh);
+
+        // 🌟 GLASS WALLS
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xa8b8d0, transparent: true, opacity: 0.2, side: THREE.DoubleSide, roughness: 0.1 });
+
+        const wallBack = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_X, ROOM_HEIGHT), wallMat);
+        wallBack.position.set(0, ROOM_HEIGHT/2, -ROOM_Z/2);
+        scene.add(wallBack);
+
+        const wallFront = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_X, ROOM_HEIGHT), wallMat);
+        wallFront.position.set(0, ROOM_HEIGHT/2, ROOM_Z/2);
+        scene.add(wallFront);
+
+        const wallLeft = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_Z, ROOM_HEIGHT), wallMat);
+        wallLeft.rotation.y = Math.PI/2;
+        wallLeft.position.set(-ROOM_X/2, ROOM_HEIGHT/2, 0);
+        scene.add(wallLeft);
+
+        const wallRight = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_Z, ROOM_HEIGHT), wallMat);
+        wallRight.rotation.y = Math.PI/2;
+        wallRight.position.set(ROOM_X/2, ROOM_HEIGHT/2, 0);
+        scene.add(wallRight);
+    }
+
+    function createHumanMesh() {
+        const group = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ color: HEX_COLORS.human, roughness: 0.3 });
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), mat);
+        head.position.y = 1.65; head.castShadow = true;
+        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.15, 0.6, 16), mat);
+        torso.position.y = 1.2; torso.castShadow = true;
+
+        function createLimb(rt, rb, h) {
+            const geo = new THREE.CylinderGeometry(rt, rb, h, 16);
+            geo.translate(0, -h / 2, 0);
+            const m = new THREE.Mesh(geo, mat);
+            m.castShadow = true; return m;
+        }
+
+        const legL = createLimb(0.06, 0.05, 0.8); legL.position.set(-0.1, 0.9, 0);
+        const legR = createLimb(0.06, 0.05, 0.8); legR.position.set(0.1, 0.9, 0);
+        const armL = createLimb(0.05, 0.04, 0.7); armL.position.set(-0.25, 1.45, 0);
+        const armR = createLimb(0.05, 0.04, 0.7); armR.position.set(0.25, 1.45, 0);
+
+        group.add(head, torso, legL, legR, armL, armR);
+        group.userData = { legL: legL, legR: legR, armL: armL, armR: armR, walkCycle: Math.random() * Math.PI * 2 };
+        return group;
+    }
+
+    function build3DZones() {
+        SIM_ZONES.forEach(z => {
+            // Hardware Puck on Ceiling
+            const hwGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 32);
+            const hwMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
+            const hardware = new THREE.Mesh(hwGeo, hwMat);
+            hardware.position.set(z.x, ROOM_HEIGHT - 0.05, z.z);
+            scene.add(hardware);
+
+            // 🌟 1. DOWNWARD CONAL BEAM
+            // Cone Geometry starting from ceiling
+            const coneGeo = new THREE.ConeGeometry(z.radius, ROOM_HEIGHT, 32, 1, true);
+            coneGeo.translate(0, -ROOM_HEIGHT / 2, 0); // Apex at y=0, base at y=-HEIGHT
+            const coneMat = new THREE.MeshBasicMaterial({
+                color: HEX_COLORS.conal,
+                transparent: true,
+                opacity: 0.22, // 🌟 DARKER OPACITY (Removed additive blending so it doesn't wash out)
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+            const cone = new THREE.Mesh(coneGeo, coneMat);
+            cone.position.set(z.x, ROOM_HEIGHT, z.z);
+            scene.add(cone);
+
+            // Real Spotlight to illuminate the floor for Conal Mode
+            const spotLight = new THREE.SpotLight(HEX_COLORS.conal, 2.5); // Color, Intensity
+            spotLight.position.set(z.x, ROOM_HEIGHT, z.z);
+            spotLight.angle = Math.atan(z.radius / ROOM_HEIGHT);
+            spotLight.penumbra = 0.5;
+            spotLight.distance = ROOM_HEIGHT * 2;
+            // Target the floor
+            const spotTarget = new THREE.Object3D();
+            spotTarget.position.set(z.x, 0, z.z);
+            scene.add(spotTarget);
+            spotLight.target = spotTarget;
+            scene.add(spotLight);
+
+
+            // 🌟 2. UPPER ROOM BEAM
+            const urHeight = 0.6;
+            const radialGeo = new THREE.ConeGeometry(5.0, urHeight, 32, 1, true);
+            radialGeo.translate(0, urHeight / 2, 0);
+            const radialMat = new THREE.MeshBasicMaterial({
+                color: HEX_COLORS.radial,
+                transparent: true,
+                opacity: 0.15,
+                blending: THREE.AdditiveBlending, // Keeps overlapping ceilings looking bright
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+            const radial = new THREE.Mesh(radialGeo, radialMat);
+            radial.position.set(z.x, ROOM_HEIGHT - urHeight, z.z);
+            radial.visible = false;
+            scene.add(radial);
+
+            // Real PointLight to illuminate the ceiling for Radial Mode
+            const pointLight = new THREE.PointLight(HEX_COLORS.radial, 2.0, 8.0);
+            pointLight.position.set(z.x, ROOM_HEIGHT - 0.2, z.z);
+            pointLight.visible = false;
+            scene.add(pointLight);
+
+            zoneMeshes[z.id] = { cone, radial, spotLight, pointLight };
+        });
+
+        PEOPLE.forEach(() => {
+            const h = createHumanMesh();
+            scene.add(h);
+            humanMeshes.push(h);
+        });
+    }
+
+    // === 3. CORE LOOP ===
+    let lastTime = performance.now();
+
+    function updateSimulation() {
+        const now = performance.now();
+        const dt = (now - lastTime) / 1000.0;
+        lastTime = now;
+
+        // 1. Move People
+        PEOPLE.forEach(p => p.update(dt));
+
+        // 2. Check Collisions & Update Graphics
+        SIM_ZONES.forEach(z => {
+            z.occupied = false;
+            for(let p of PEOPLE) {
+                if(Math.hypot(p.x - z.x, p.z - z.z) < z.radius) {
+                    z.occupied = true; break;
+                }
+            }
+
+            let zm = zoneMeshes[z.id];
+
+            // 🌟 Toggle Both Geometry AND Real Lights
+            if (z.occupied) {
+                zm.cone.visible = false;
+                zm.spotLight.visible = false; // Turn off floor light
+
+                zm.radial.visible = true;
+                zm.pointLight.visible = true; // Turn on ceiling light
+            } else {
+                zm.cone.visible = true;
+                zm.spotLight.visible = true;  // Turn on floor light
+
+                zm.radial.visible = false;
+                zm.pointLight.visible = false; // Turn off ceiling light
+            }
+        });
+
+        updateDashboard();
+        updateSimMath();
+
+        // 4. Animate Humans
+        PEOPLE.forEach((p, i) => {
+            let mesh = humanMeshes[i]; let rig = mesh.userData;
+            let dx = p.x - mesh.position.x;
+            let dz = p.z - mesh.position.z;
+            let moveDist = Math.hypot(dx, dz);
+
+            mesh.position.x = p.x; mesh.position.z = p.z;
+
+            if (moveDist > 0.001) {
+                mesh.rotation.y = Math.atan2(dx, dz);
+                rig.walkCycle += moveDist * 10;
+                let swing = Math.sin(rig.walkCycle) * 0.6;
+                rig.legL.rotation.x = swing; rig.legR.rotation.x = -swing;
+                rig.armL.rotation.x = -swing; rig.armR.rotation.x = swing;
+            }
+        });
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        updateSimulation();
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    // Initialize
+    initDashboard();
+    build3DRoom();
+    build3DZones();
+    updateSimMath();
+    animate();
+
+</script>
+</body>
+</html>

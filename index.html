@@ -48,6 +48,11 @@
         .zone-id { font-size: 0.85rem; font-weight: 800; margin-bottom: 4px; color: #333; }
         .zone-state { font-size: 0.75rem; font-weight: 700; padding: 3px 6px; border-radius: 4px; color: #fff; text-transform: uppercase; display: inline-block; }
 
+        /* Sliders */
+        .slider-container { margin-bottom: 10px; padding: 10px; background: #fff; border: 1px solid var(--border); border-radius: 6px; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 0.85em; font-weight: bold; margin-bottom: 5px; color: #444; }
+        input[type="range"] { width: 100%; margin: 0; }
+
         /* Hidden Engineering Section */
         .engineering-toggle { width: 100%; padding: 10px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; margin-bottom: 10px; color: #4a5568; transition: background 0.2s;}
         .engineering-toggle:hover { background: #cbd5e0; }
@@ -60,7 +65,7 @@
         .equation-box { background: #1a1a1a; color: #fff; padding: 10px; border-radius: 8px; margin-top: 15px; text-align: left; font-size:0.8em; overflow-x: auto;}
 
         /* === RIGHT SIDEBAR (3D View) === */
-        .main-view { flex-grow: 1; position: relative; background: #222; } /* Darkened background behind room */
+        .main-view { flex-grow: 1; position: relative; background: #e9ecef; } /* Softer background to highlight walls */
         canvas { display: block; width: 100%; height: 100%; outline: none; }
 
         .btn-cinematic { position: absolute; top: 20px; right: 20px; background: var(--c-wall); color: white; padding: 8px 16px; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 5; }
@@ -107,6 +112,26 @@
 
     <div class="section-title">Live Hardware Status</div>
     <div class="dash-grid" id="zone-grid"></div>
+
+    <div class="section-title conal-accent">Conal Visuals</div>
+    <div class="slider-container">
+        <div class="slider-label"><span>Brightness</span><span id="conalBrightVal">100%</span></div>
+        <input type="range" id="conalBrightSlider" min="0" max="200" value="100" oninput="updateVisuals()">
+    </div>
+    <div class="slider-container">
+        <div class="slider-label"><span>Contrast</span><span id="conalContVal">0</span></div>
+        <input type="range" id="conalContSlider" min="-100" max="100" value="0" oninput="updateVisuals()">
+    </div>
+
+    <div class="section-title radial-accent">Radial Visuals</div>
+    <div class="slider-container">
+        <div class="slider-label"><span>Brightness</span><span id="radialBrightVal">100%</span></div>
+        <input type="range" id="radialBrightSlider" min="0" max="200" value="100" oninput="updateVisuals()">
+    </div>
+    <div class="slider-container">
+        <div class="slider-label"><span>Contrast</span><span id="radialContVal">0</span></div>
+        <input type="range" id="radialContSlider" min="-100" max="100" value="0" oninput="updateVisuals()">
+    </div>
 
     <button class="engineering-toggle" onclick="toggleEngineering()">⚙️ Toggle Engineering Parameters</button>
 
@@ -159,7 +184,6 @@
 </div>
 
 <script>
-    // === UI LOGIC ===
     function toggleEngineering() {
         const panel = document.getElementById('engineering-panel');
         panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
@@ -190,14 +214,15 @@
     class Person {
         constructor(id) {
             this.id = id;
-            this.x = (Math.random() - 0.5) * (ROOM_X - 1);
-            this.z = (Math.random() - 0.5) * (ROOM_Z - 1);
-            this.speed = 1.0 + Math.random() * 0.8;
+            this.x = (Math.random() - 0.5) * (ROOM_X - 2); 
+            this.z = (Math.random() - 0.5) * (ROOM_Z - 2);
+            // 🌟 Decreased speed to 40% of original
+            this.speed = (1.0 + Math.random() * 0.4) ;
             this.pickTarget();
         }
         pickTarget() {
-            this.tx = (Math.random() - 0.5) * (ROOM_X - 1);
-            this.tz = (Math.random() - 0.5) * (ROOM_Z - 1);
+            this.tx = (Math.random() - 0.5) * (ROOM_X - 2);
+            this.tz = (Math.random() - 0.5) * (ROOM_Z - 2);
         }
         update(dt) {
             let dx = this.tx - this.x;
@@ -284,15 +309,15 @@
 
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    // Use a slightly darker background to make the real lights pop
-    scene.background = new THREE.Color(0xf0f2f5);
+    scene.background = new THREE.Color(0xe9ecef); // Matches CSS background to blend smoothly
 
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 38, 35);
+    // Pulled back to see the entire newly enclosed room
+    camera.position.set(0, 38, 38);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    // 🌟 ENABLE SHADOWS ON RENDERER
+    // ENABLE SHADOWS
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
@@ -302,12 +327,12 @@
     controls.dampingFactor = 0.05;
     controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-    // Dim the ambient light so spotlights are visible
-    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+    // Ambient light provides base visibility
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5)); 
 
-    // 🌟 MAIN GLOBAL LIGHT (Casts crisp shadows for humans)
+    // GLOBAL SUNLIGHT
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    dirLight.position.set(15, 30, 15);
+    dirLight.position.set(15, 40, 15);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
@@ -330,54 +355,227 @@
         btn.style.background = isCinematic ? "var(--c-radial)" : "var(--c-wall)";
     }
 
+    // Independent Custom Shader for Light Beams
+    function createBeamMaterial(hexColor, initOpacity, isAdditive) {
+        return new THREE.ShaderMaterial({
+            uniforms: {
+                baseColor: { value: new THREE.Color(hexColor) },
+                baseOpacity: { value: initOpacity },
+                brightness: { value: 1.0 },
+                contrast: { value: 1.0 }
+            },
+            vertexShader: `
+                void main() {
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 baseColor;
+                uniform float baseOpacity;
+                uniform float brightness;
+                uniform float contrast;
+
+                void main() {
+                    vec3 c = baseColor;
+                    c *= brightness;
+                    c = (c - 0.5) * contrast + 0.5;
+                    c = clamp(c, 0.0, 1.0);
+                    gl_FragColor = vec4(c, baseOpacity);
+                }
+            `,
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            blending: isAdditive ? THREE.AdditiveBlending : THREE.NormalBlending
+        });
+    }
+
+    // Process UI Slider Updates
+    function updateVisuals() {
+        const cBright = document.getElementById('conalBrightSlider').value / 100; 
+        const cContRaw = parseInt(document.getElementById('conalContSlider').value); 
+        const cCont = cContRaw < 0 ? (cContRaw + 100) / 100 : cContRaw / 100 * 4.0 + 1.0;
+
+        const rBright = document.getElementById('radialBrightSlider').value / 100; 
+        const rContRaw = parseInt(document.getElementById('radialContSlider').value); 
+        const rCont = rContRaw < 0 ? (rContRaw + 100) / 100 : rContRaw / 100 * 4.0 + 1.0;
+
+        document.getElementById('conalBrightVal').innerText = document.getElementById('conalBrightSlider').value + "%";
+        document.getElementById('conalContVal').innerText = cContRaw;
+        document.getElementById('radialBrightVal').innerText = document.getElementById('radialBrightSlider').value + "%";
+        document.getElementById('radialContVal').innerText = rContRaw;
+
+        SIM_ZONES.forEach(z => {
+            if (zoneMeshes[z.id]) {
+                zoneMeshes[z.id].cone.material.uniforms.brightness.value = cBright;
+                zoneMeshes[z.id].cone.material.uniforms.contrast.value = cCont;
+
+                if(zoneMeshes[z.id].spotLight) {
+                    zoneMeshes[z.id].spotLight.intensity = 2.5 * cBright;
+                }
+
+                zoneMeshes[z.id].radial.material.uniforms.brightness.value = rBright;
+                zoneMeshes[z.id].radial.material.uniforms.contrast.value = rCont;
+            }
+        });
+    }
+
     window.addEventListener('resize', () => {
         camera.aspect = container.clientWidth / container.clientHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(container.clientWidth, container.clientHeight);
     });
 
+    // HELPER FUNCTION: Builds a wall, cuts 4-corner windows into it, and adds white daylight backing
+    function createWallWithWindows(width, height, thickness, winCount, pos, rotY) {
+        const wallGroup = new THREE.Group();
+
+        // 1. Create the solid wall shape
+        const shape = new THREE.Shape();
+        shape.moveTo(-width/2, 0);
+        shape.lineTo(width/2, 0);
+        shape.lineTo(width/2, height);
+        shape.lineTo(-width/2, height);
+        shape.lineTo(-width/2, 0);
+
+        // Window specs (Smaller, 2x2m)
+        const winW = 2.0;
+        const winH = 2.0;
+        const winY = 1.5; // Height from floor
+
+        const spacing = width / (winCount + 1);
+
+        for(let i=0; i<winCount; i++) {
+            let cx = -width/2 + spacing * (i + 1);
+            
+            // 2. Cut the hole in the wall shape
+            const hole = new THREE.Path();
+            hole.moveTo(cx - winW/2, winY);
+            hole.lineTo(cx + winW/2, winY);
+            hole.lineTo(cx + winW/2, winY + winH);
+            hole.lineTo(cx - winW/2, winY + winH);
+            hole.lineTo(cx - winW/2, winY);
+            shape.holes.push(hole);
+
+            // 3. Add Pure White Daylight Backing (Outside the room)
+            const skyGeo = new THREE.PlaneGeometry(winW, winH);
+            const skyMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Pure bright white, unlit
+            const sky = new THREE.Mesh(skyGeo, skyMat);
+            // Local Z: Positive is inward, Negative is outward. Place just outside wall.
+            sky.position.set(cx, winY + winH/2, -thickness/2 - 0.05); 
+            wallGroup.add(sky);
+
+            // 4. Add Tinted Glass Pane (Inside the frame)
+            const glassGeo = new THREE.PlaneGeometry(winW, winH);
+            const glassMat = new THREE.MeshStandardMaterial({
+                color: 0x88ccff, // Subtle blue tint
+                transparent: true,
+                opacity: 0.35,
+                metalness: 0.8,
+                roughness: 0.1,
+                side: THREE.DoubleSide
+            });
+            const glass = new THREE.Mesh(glassGeo, glassMat);
+            glass.position.set(cx, winY + winH/2, 0);
+            wallGroup.add(glass);
+
+            // 5. Add 4-Corner Aluminum Frames (Mullions)
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.7 });
+            const th = 0.06; // Frame thickness
+            const d = thickness + 0.02; // Frame depth (protrudes slightly from wall)
+
+            // Outer Top/Bottom
+            const fTop = new THREE.Mesh(new THREE.BoxGeometry(winW + th, th, d), frameMat);
+            fTop.position.set(cx, winY + winH, 0);
+            const fBot = new THREE.Mesh(new THREE.BoxGeometry(winW + th, th, d), frameMat);
+            fBot.position.set(cx, winY, 0);
+            
+            // Outer Left/Right
+            const fLeft = new THREE.Mesh(new THREE.BoxGeometry(th, winH + th, d), frameMat);
+            fLeft.position.set(cx - winW/2, winY + winH/2, 0);
+            const fRight = new THREE.Mesh(new THREE.BoxGeometry(th, winH + th, d), frameMat);
+            fRight.position.set(cx + winW/2, winY + winH/2, 0);
+            
+            // Cross (Inner Horizontal and Vertical)
+            const fMidH = new THREE.Mesh(new THREE.BoxGeometry(winW, th, d), frameMat);
+            fMidH.position.set(cx, winY + winH/2, 0);
+            const fMidV = new THREE.Mesh(new THREE.BoxGeometry(th, winH, d), frameMat);
+            fMidV.position.set(cx, winY + winH/2, 0);
+
+            wallGroup.add(fTop, fBot, fLeft, fRight, fMidH, fMidV);
+        }
+
+        // 6. Extrude the final wall with holes
+        const extrudeSettings = { depth: thickness, bevelEnabled: false };
+        const wallGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        // Center the extrusion on Z=0
+        wallGeo.translate(0, 0, -thickness/2);
+
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.9 });
+        const wallMesh = new THREE.Mesh(wallGeo, wallMat);
+        wallMesh.receiveShadow = true;
+        wallGroup.add(wallMesh);
+
+        // 7. Position and Rotate the entire Wall Group
+        wallGroup.position.copy(pos);
+        wallGroup.rotation.y = rotY;
+
+        scene.add(wallGroup);
+    }
+
     function build3DRoom() {
-        // 🌟 SOLID FLOOR (Receives realistic shadows and light pools)
+        // PROCEDURAL COMMERCIAL TILE FLOOR
+        const canvas = document.createElement('canvas');
+        canvas.width = 512; canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#f1f5f9'; 
+        ctx.fillRect(0,0,512,512);
+        ctx.strokeStyle = '#cbd5e1'; 
+        ctx.lineWidth = 8;
+        ctx.strokeRect(0,0,512,512);
+
+        const floorTex = new THREE.CanvasTexture(canvas);
+        floorTex.wrapS = THREE.RepeatWrapping;
+        floorTex.wrapT = THREE.RepeatWrapping;
+        floorTex.repeat.set(ROOM_X, ROOM_Z); 
+
         const floorGeo = new THREE.PlaneGeometry(ROOM_X, ROOM_Z);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.8, metalness: 0.1 });
+        const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.8, metalness: 0.1 });
         const floorMesh = new THREE.Mesh(floorGeo, floorMat);
         floorMesh.rotation.x = -Math.PI / 2;
-        floorMesh.receiveShadow = true; // Enables human shadows
+        floorMesh.receiveShadow = true;
         scene.add(floorMesh);
 
-        // Add a subtle grid on top of the floor
-        const gridHelper = new THREE.GridHelper(Math.max(ROOM_X, ROOM_Z), Math.max(ROOM_X, ROOM_Z), 0x999999, 0xbbbbbb);
-        gridHelper.position.y = 0.01;
-        scene.add(gridHelper);
+        // 🌟 BUILD WALLS WITH DAYLIGHT WINDOWS
+        const wallThickness = 0.2;
+        
+        // 🌟 Back Wall: 25m wide, 3 windows
+        createWallWithWindows(ROOM_X, ROOM_HEIGHT, wallThickness, 3, new THREE.Vector3(0, 0, -ROOM_Z/2), 0);
+        
+        // 🌟 Left Wall: 20m wide, 2 windows
+        createWallWithWindows(ROOM_Z, ROOM_HEIGHT, wallThickness, 2, new THREE.Vector3(-ROOM_X/2, 0, 0), Math.PI/2);
+        
+        // 🌟 Right Wall: 20m wide, 2 windows
+        createWallWithWindows(ROOM_Z, ROOM_HEIGHT, wallThickness, 2, new THREE.Vector3(ROOM_X/2, 0, 0), -Math.PI/2);
 
-        // 🌟 GLASS CEILING (Lets camera see inside, but defines the volume)
-        const ceilGeo = new THREE.PlaneGeometry(ROOM_X, ROOM_Z);
-        const ceilMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.1, side: THREE.DoubleSide });
-        const ceilMesh = new THREE.Mesh(ceilGeo, ceilMat);
-        ceilMesh.rotation.x = Math.PI / 2;
-        ceilMesh.position.y = ROOM_HEIGHT;
-        scene.add(ceilMesh);
+        // ARCHITECTURAL BASEBOARDS
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5 }); 
+        const baseBack = new THREE.Mesh(new THREE.BoxGeometry(ROOM_X, 0.15, 0.05), baseMat);
+        baseBack.position.set(0, 0.075, -ROOM_Z/2 + 0.025);
+        scene.add(baseBack);
 
-        // 🌟 GLASS WALLS
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0xa8b8d0, transparent: true, opacity: 0.2, side: THREE.DoubleSide, roughness: 0.1 });
+        const baseLeft = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, ROOM_Z), baseMat);
+        baseLeft.position.set(-ROOM_X/2 + 0.025, 0.075, 0);
+        scene.add(baseLeft);
 
-        const wallBack = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_X, ROOM_HEIGHT), wallMat);
-        wallBack.position.set(0, ROOM_HEIGHT/2, -ROOM_Z/2);
-        scene.add(wallBack);
+        const baseRight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, ROOM_Z), baseMat);
+        baseRight.position.set(ROOM_X/2 - 0.025, 0.075, 0);
+        scene.add(baseRight);
 
-        const wallFront = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_X, ROOM_HEIGHT), wallMat);
-        wallFront.position.set(0, ROOM_HEIGHT/2, ROOM_Z/2);
-        scene.add(wallFront);
-
-        const wallLeft = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_Z, ROOM_HEIGHT), wallMat);
-        wallLeft.rotation.y = Math.PI/2;
-        wallLeft.position.set(-ROOM_X/2, ROOM_HEIGHT/2, 0);
-        scene.add(wallLeft);
-
-        const wallRight = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_Z, ROOM_HEIGHT), wallMat);
-        wallRight.rotation.y = Math.PI/2;
-        wallRight.position.set(ROOM_X/2, ROOM_HEIGHT/2, 0);
-        scene.add(wallRight);
+        // DROPPED ACOUSTIC CEILING GRID (Semi-transparent)
+        const ceilGrid = new THREE.GridHelper(Math.max(ROOM_X, ROOM_Z), Math.max(ROOM_X, ROOM_Z) / 2, 0xd1d5db, 0xe2e8f0);
+        ceilGrid.position.y = ROOM_HEIGHT;
+        scene.add(ceilGrid);
     }
 
     function createHumanMesh() {
@@ -408,66 +606,66 @@
 
     function build3DZones() {
         SIM_ZONES.forEach(z => {
-            // Hardware Puck on Ceiling
-            const hwGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 32);
-            const hwMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
-            const hardware = new THREE.Mesh(hwGeo, hwMat);
-            hardware.position.set(z.x, ROOM_HEIGHT - 0.05, z.z);
-            scene.add(hardware);
+            // REALISTIC HARDWARE FIXTURE (Compound Object)
+            const fixtureGroup = new THREE.Group();
 
-            // 🌟 1. DOWNWARD CONAL BEAM
-            // Cone Geometry starting from ceiling
+            const bezelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.05, 32);
+            const bezelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.1 });
+            const bezel = new THREE.Mesh(bezelGeo, bezelMat);
+
+            const coreGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.06, 32);
+            const coreMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.8 });
+            const core = new THREE.Mesh(coreGeo, coreMat);
+            core.position.y = -0.01;
+
+            const ledGeo = new THREE.TorusGeometry(0.15, 0.02, 16, 32);
+            const ledMat = new THREE.MeshBasicMaterial({ color: HEX_COLORS.conal }); // Start Magenta
+            const ledRing = new THREE.Mesh(ledGeo, ledMat);
+            ledRing.rotation.x = Math.PI / 2;
+            ledRing.position.y = -0.04;
+
+            fixtureGroup.add(bezel);
+            fixtureGroup.add(core);
+            fixtureGroup.add(ledRing);
+            fixtureGroup.position.set(z.x, ROOM_HEIGHT, z.z);
+            scene.add(fixtureGroup);
+
+            // DOWNWARD CONAL BEAM
             const coneGeo = new THREE.ConeGeometry(z.radius, ROOM_HEIGHT, 32, 1, true);
-            coneGeo.translate(0, -ROOM_HEIGHT / 2, 0); // Apex at y=0, base at y=-HEIGHT
-            const coneMat = new THREE.MeshBasicMaterial({
-                color: HEX_COLORS.conal,
-                transparent: true,
-                opacity: 0.22, // 🌟 DARKER OPACITY (Removed additive blending so it doesn't wash out)
-                depthWrite: false,
-                side: THREE.DoubleSide
-            });
+            coneGeo.translate(0, -ROOM_HEIGHT / 2, 0);
+
+            const coneMat = createBeamMaterial(HEX_COLORS.conal, 0.18, false);
+
             const cone = new THREE.Mesh(coneGeo, coneMat);
             cone.position.set(z.x, ROOM_HEIGHT, z.z);
-            scene.add(cone);
 
-            // Real Spotlight to illuminate the floor for Conal Mode
-            const spotLight = new THREE.SpotLight(HEX_COLORS.conal, 2.5); // Color, Intensity
+            const spotLight = new THREE.SpotLight(HEX_COLORS.conal, 2.5);
             spotLight.position.set(z.x, ROOM_HEIGHT, z.z);
             spotLight.angle = Math.atan(z.radius / ROOM_HEIGHT);
             spotLight.penumbra = 0.5;
-            spotLight.distance = ROOM_HEIGHT * 2;
-            // Target the floor
+            spotLight.distance = ROOM_HEIGHT * 1.5;
             const spotTarget = new THREE.Object3D();
             spotTarget.position.set(z.x, 0, z.z);
             scene.add(spotTarget);
             spotLight.target = spotTarget;
+
+            scene.add(cone);
             scene.add(spotLight);
 
-
-            // 🌟 2. UPPER ROOM BEAM
-            const urHeight = 0.6;
+            // UPPER ROOM BEAM
+            const urHeight = 0.5;
             const radialGeo = new THREE.ConeGeometry(5.0, urHeight, 32, 1, true);
             radialGeo.translate(0, urHeight / 2, 0);
-            const radialMat = new THREE.MeshBasicMaterial({
-                color: HEX_COLORS.radial,
-                transparent: true,
-                opacity: 0.15,
-                blending: THREE.AdditiveBlending, // Keeps overlapping ceilings looking bright
-                depthWrite: false,
-                side: THREE.DoubleSide
-            });
+
+            const radialMat = createBeamMaterial(HEX_COLORS.radial, 0.10, true);
+
             const radial = new THREE.Mesh(radialGeo, radialMat);
             radial.position.set(z.x, ROOM_HEIGHT - urHeight, z.z);
             radial.visible = false;
+
             scene.add(radial);
 
-            // Real PointLight to illuminate the ceiling for Radial Mode
-            const pointLight = new THREE.PointLight(HEX_COLORS.radial, 2.0, 8.0);
-            pointLight.position.set(z.x, ROOM_HEIGHT - 0.2, z.z);
-            pointLight.visible = false;
-            scene.add(pointLight);
-
-            zoneMeshes[z.id] = { cone, radial, spotLight, pointLight };
+            zoneMeshes[z.id] = { cone, radial, spotLight, ledRing };
         });
 
         PEOPLE.forEach(() => {
@@ -475,6 +673,8 @@
             scene.add(h);
             humanMeshes.push(h);
         });
+
+        updateVisuals(); 
     }
 
     // === 3. CORE LOOP ===
@@ -485,10 +685,8 @@
         const dt = (now - lastTime) / 1000.0;
         lastTime = now;
 
-        // 1. Move People
         PEOPLE.forEach(p => p.update(dt));
 
-        // 2. Check Collisions & Update Graphics
         SIM_ZONES.forEach(z => {
             z.occupied = false;
             for(let p of PEOPLE) {
@@ -499,26 +697,24 @@
 
             let zm = zoneMeshes[z.id];
 
-            // 🌟 Toggle Both Geometry AND Real Lights
             if (z.occupied) {
                 zm.cone.visible = false;
-                zm.spotLight.visible = false; // Turn off floor light
+                zm.spotLight.visible = false;
 
                 zm.radial.visible = true;
-                zm.pointLight.visible = true; // Turn on ceiling light
+                zm.ledRing.material.color.setHex(HEX_COLORS.radial); 
             } else {
                 zm.cone.visible = true;
-                zm.spotLight.visible = true;  // Turn on floor light
+                zm.spotLight.visible = true;
 
                 zm.radial.visible = false;
-                zm.pointLight.visible = false; // Turn off ceiling light
+                zm.ledRing.material.color.setHex(HEX_COLORS.conal); 
             }
         });
 
         updateDashboard();
         updateSimMath();
 
-        // 4. Animate Humans
         PEOPLE.forEach((p, i) => {
             let mesh = humanMeshes[i]; let rig = mesh.userData;
             let dx = p.x - mesh.position.x;
@@ -529,8 +725,9 @@
 
             if (moveDist > 0.001) {
                 mesh.rotation.y = Math.atan2(dx, dz);
-                rig.walkCycle += moveDist * 10;
-                let swing = Math.sin(rig.walkCycle) * 0.6;
+                // 🌟 Decreased walking animation speed to perfectly match movement speed
+                rig.walkCycle += moveDist * 4;
+                let swing = Math.sin(rig.walkCycle) * 0.4;
                 rig.legL.rotation.x = swing; rig.legR.rotation.x = -swing;
                 rig.armL.rotation.x = -swing; rig.armR.rotation.x = swing;
             }

@@ -12,35 +12,62 @@
     <style>
         :root {
             --bg: #ffffff; --panel: #f9fafb; --border: #e5e7eb;
-            --c-worker: #eab308;  /* High-Vis Yellow for Warehouse Workers */
+            --c-worker: #eab308;  
             --c-wall: #2563eb;
-            --c-conal: #d63384;   /* Magenta (Empty/Downward) */
-            --c-radial: #0bc5ea;  /* Cyan (Occupied/Upper Room) */
+            --c-conal: #b0266e;   
+            --c-radial: #0bc5ea;  
         }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; color: #111; }
 
-        /* === LEFT SIDEBAR === */
-        .sidebar { width: 380px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-shadow: 4px 0 15px rgba(0,0,0,0.02); z-index: 10; overflow-y: auto; }
+        /* === 🌟 COLLAPSIBLE SIDEBAR SYSTEM === */
+        .sidebar-container {
+            position: fixed; left: 0; top: 0; bottom: 0; z-index: 1000;
+            display: flex; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-380px); /* Start hidden */
+        }
+        .sidebar-container.expanded { transform: translateX(0); }
+
+        .sidebar { box-sizing: border-box; width: 380px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-shadow: 10px 0 30px rgba(0,0,0,0.3); overflow-y: auto; }
+        
+        /* 🌟 VERTICAL TAB BUTTON */
+        .sidebar-toggle-tab {
+            width: 32px; height: 120px; background: var(--c-wall); color: white;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border-radius: 0 8px 8px 0; margin-top: 40px;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+        }
+        .sidebar-toggle-tab span {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 0.65rem; 
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
         h2 { margin: 0 0 15px 0; color: var(--c-wall); border-bottom: 2px solid var(--c-wall); padding-bottom: 10px; font-size: 1.4rem; font-weight: 800; text-transform: uppercase; }
 
         .status-badge { text-align:center; padding:8px; margin-bottom:15px; font-weight:700; font-size:0.75rem; border-radius:4px; background:#dcfce7; color:#166534; }
 
-        /* Main Output Box */
         #result-box { margin-bottom: 15px; padding: 15px; border-radius: 8px; border-left: 6px solid var(--c-wall); background: #f0f9ff; }
         .split-metric { display: flex; justify-content: space-between; font-size: 0.9em; margin-top: 5px; padding: 4px 0; border-bottom: 1px dashed #ddd; font-weight: 600; }
         .conal-accent { color: var(--c-conal); }
         .radial-accent { color: var(--c-radial); }
 
-        .each-display { font-weight: 800; margin-top:12px; font-size: 1.6em; color: #333; text-align: center; }
+        .each-display { font-weight: 800; margin-top:12px; font-size: 1.5em; color: #333; text-align: center; }
+        .each-subtitle { font-size: 0.45em; font-weight: 600; color: #666; margin-top: 4px; text-transform: none; }
 
-        /* Progress Bar */
+        .contribution-panel { display: none; margin-top: 10px; padding: 10px; background: #fff; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .contrib-toggle { display: block; text-align: center; font-size: 0.8em; color: #1a73e8; cursor: pointer; margin-top: 8px; font-weight: bold; user-select: none; transition: color 0.2s; }
+        .contrib-toggle:hover { color: #115293; }
+
         .perf-track { width: 100%; height: 16px; background: #e2e8f0; border-radius: 8px; margin-top: 15px; overflow: hidden; border: 1px solid #ccc; position: relative; }
         .perf-bar { height: 100%; width: 0%; transition: width 0.2s ease-out, background-color 0.2s ease; }
-        .target-line { position: absolute; left: 12%; top: 0; bottom: 0; width: 2px; background: #222; z-index: 5; box-shadow: 1px 0 2px rgba(0,0,0,0.3); }
+        .target-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #222; z-index: 5; box-shadow: 1px 0 2px rgba(0,0,0,0.3); }
         .perf-label { font-size: 0.75em; color: #666; position: relative; height: 20px; margin-top: 4px; font-weight: 600; }
         .lbl { position: absolute; transform: translateX(-50%); }
 
-        /* Hardware Dashboard */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; overflow-y: auto; max-height: 200px; margin-bottom: 15px; padding-right: 5px;}
         .dash-grid::-webkit-scrollbar { width: 6px; }
         .dash-grid::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
@@ -48,13 +75,11 @@
         .zone-id { font-size: 0.85rem; font-weight: 800; margin-bottom: 4px; color: #333; }
         .zone-state { font-size: 0.75rem; font-weight: 700; padding: 3px 6px; border-radius: 4px; color: #fff; text-transform: uppercase; display: inline-block; }
 
-        /* Hidden Settings Panels */
         .layer-toggle { width: 100%; padding: 10px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; margin-bottom: 10px; color: #4a5568; transition: background 0.2s;}
         .layer-toggle:hover { background: #cbd5e0; }
-
         .hidden-panel { display: none; margin-bottom: 10px; border-top: 1px solid #ddd; padding-top: 10px; }
+
         .section-title { font-size: 0.8em; font-weight: bold; color: #555; margin: 10px 0 5px 0; text-transform: uppercase; }
-        
         .input-group { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .input-group label { font-size: 0.8em; font-weight: 600; color: #444; }
         .input-group input, .input-group select { width: 45%; padding: 6px; border: 1px solid #ccd; border-radius: 4px; box-sizing: border-box; font-size: 0.85em; }
@@ -65,129 +90,151 @@
         .btn-apply:hover { background: #14532d; }
 
         /* === RIGHT SIDEBAR (3D View) === */
-        .main-view { flex-grow: 1; position: relative; background: #d1d5db; } /* Darker industrial background */
+        .main-view { flex-grow: 1; position: relative; background: #d1d5db; } 
         canvas { display: block; width: 100%; height: 100%; outline: none; }
 
         .btn-cinematic { position: absolute; top: 20px; right: 20px; background: var(--c-wall); color: white; padding: 8px 16px; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 5; }
-        .overlay-instruction { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; pointer-events: none; z-index: 5; }
+        .overlay-instruction { position: absolute; top: 20px; left: 60px; background: rgba(0,0,0,0.6); color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; pointer-events: none; z-index: 5; }
 
         .legend { position: absolute; bottom: 20px; right: 20px; background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 20px; display: flex; gap: 12px; border: 1px solid #ddd; font-size: 0.75rem; font-weight: 600; pointer-events: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); z-index: 5; }
         .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        
+        #safety-banner { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 80%; background: #ef4444; color: white; font-weight: bold; text-align: center; padding: 12px; border-radius: 8px; z-index: 100; display: none; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); border: 2px solid #b91c1c; pointer-events: none; }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h2>SUVOS WAREHOUSE</h2>
-    <div class="status-badge">INDUSTRIAL FACILITY</div>
+<div class="sidebar-container" id="sidebar-container">
+    <div class="sidebar">
+        <h2>SUVOS WAREHOUSE</h2>
+        <div class="status-badge">INDUSTRIAL FACILITY</div>
 
-    <div id="result-box">
-        <div style="font-size: 0.85em; display:flex; justify-content:space-between; margin-bottom: 10px; color:#555; font-weight:bold;">
-            <span>Facility Area: <span style="color:#000;">1200 m²</span></span>
-            <span>Active Units: <span id="ui-active-units" style="color:#000;">9</span></span>
+        <div id="result-box">
+            <div style="font-size: 0.85em; display:flex; justify-content:space-between; margin-bottom: 10px; color:#555; font-weight:bold;">
+                <span>Facility Area: <span style="color:#000;">1200 m²</span></span>
+                <span>Active Units: <span id="ui-active-units" style="color:#000;">20</span></span>
+            </div>
+
+            <div class="split-metric" style="color:#2d3748; background: #e2e8f0; padding: 6px; border-radius: 4px; border:none; margin-top: 8px; margin-bottom: 10px;">
+                <span>Max Irradiance @ 2.1m:</span> <span id="irradianceVal" style="font-weight:bold; color:#16a34a;">0.000 µW/cm²</span>
+            </div>
+
+            <div class="each-display">
+                TOTAL PROTECTION (eACH): <span id="eachVal">0.00</span>
+                <div class="each-subtitle">*Equivalent Air Changes per Hour</div>
+            </div>
+
+            <div class="contrib-toggle" onclick="toggleContrib()" id="contrib-btn">▼ Show Mode Contributions</div>
+            <div id="contrib-panel" class="contribution-panel">
+                <div class="split-metric conal-accent">
+                    <span>1. Conal Mode (Empty):</span> <span id="val_s6_mode">0.00</span>
+                </div>
+                <div class="split-metric radial-accent">
+                    <span>2. Radial Mode (Occupied):</span> <span id="val_ur_mode">0.00</span>
+                </div>
+            </div>
+
+            <div class="perf-track">
+                <div class="target-line" title="Clinical Target (12 eACH)" style="left: 24%;"></div>
+                <div id="perfBar" class="perf-bar"></div>
+            </div>
+            <div class="perf-label">
+                <span class="lbl" style="left:0%">0</span>
+                <span class="lbl" style="left:24%; color:#222; font-weight:bold;">12</span>
+                <span class="lbl" style="left:50%">25</span>
+                <span class="lbl" style="left:100%">50+</span>
+            </div>
         </div>
 
-        <div class="split-metric conal-accent">
-            <span>1. Conal Mode (Empty):</span> <span id="val_s6_mode">0.00</span>
-        </div>
-        <div class="split-metric radial-accent">
-            <span>2. Radial Mode (Occupied):</span> <span id="val_ur_mode">0.00</span>
+        <button class="layer-toggle" onclick="togglePanel('zone-grid')" style="background: #cbd5e1;">📋 Toggle Live Hardware Status</button>
+        <div class="dash-grid" id="zone-grid" style="display: none;"></div>
+
+        <button class="layer-toggle" onclick="togglePanel('general-panel')">🔧 Toggle General Settings</button>
+        <div id="general-panel" class="hidden-panel">
+            <div class="section-title">Hardware & Population</div>
+            <div class="input-group">
+                <label>Number of Units</label>
+                <input type="number" id="setUnits" value="20" min="1" max="30">
+            </div>
+            <div class="input-group">
+                <label>Warehouse Workers</label>
+                <input type="number" id="setPeople" value="12" min="0" max="30">
+            </div>
+            <div class="input-group">
+                <label>Ceiling Height [m]</label>
+                <input type="number" id="setHeight" value="8.0" step="0.5" min="3.0" max="15.0">
+            </div>
+
+            <div class="section-title">Operational Ranges</div>
+            <div class="input-group">
+                <label>Conal Radius [m]</label>
+                <input type="number" id="setConalRad" value="4.0" step="0.5" min="1.0" max="10.0">
+            </div>
+            <div class="input-group">
+                <label>Radial Radius [m]</label>
+                <input type="number" id="setRadialRad" value="6.0" step="0.5" min="2.0" max="15.0">
+            </div>
+
+            <div class="section-title">Color Configuration</div>
+            <div class="input-group">
+                <label>Conal Mode Color</label>
+                <input type="color" id="setConalColor" value="#b0266e">
+            </div>
+            <div class="input-group">
+                <label>Radial Mode Color</label>
+                <input type="color" id="setRadialColor" value="#0bc5ea">
+            </div>
+
+            <button class="btn-apply" onclick="applySettings()">APPLY & REBUILD SCENE</button>
         </div>
 
-        <div class="each-display">
-            UNIFIED R(t): <span id="eachVal">0.00</span>
-        </div>
+        <button class="layer-toggle" onclick="togglePanel('engineering-panel')">⚙️ Toggle Engineering Math</button>
+        <div id="engineering-panel" class="hidden-panel">
+            <div class="section-title">Pathogen Settings</div>
+            <div class="input-group">
+                <label>Target (κ) [m²/J]</label>
+                <select id="virus" onchange="updateSimMath()">
+                    <option value="0.350">SARS-CoV-2 (0.350)</option>
+                    <option value="0.110">Measles (0.110)</option>
+                    <option value="0.080">Influenza A (0.080)</option>
+                    <option value="0.060">Tuberculosis (0.060)</option>
+                </select>
+            </div>
 
-        <div class="perf-track">
-            <div class="target-line" title="Clinical Target (12 eACH)"></div>
-            <div id="perfBar" class="perf-bar"></div>
-        </div>
-        <div class="perf-label">
-            <span class="lbl" style="left:0%">0</span>
-            <span class="lbl" style="left:12%; color:#222; font-weight:bold;">12</span>
-            <span class="lbl" style="left:50%">50</span>
-            <span class="lbl" style="left:100%">100+</span>
+            <div class="section-title conal-accent">Conal Mode Physics</div>
+            <div class="input-group">
+                <label>Airflow G [m³/s]</label>
+                <input type="number" id="gVal" value="12.0" step="1.0" onchange="updateSimMath()">
+            </div>
+            <div class="input-group">
+                <label>Optical Power P [W]</label>
+                <input type="number" id="pS6" value="1.2" step="0.1" onchange="updateSimMath()">
+            </div>
+
+            <div class="section-title radial-accent">Radial Mode Physics</div>
+            <div class="input-group">
+                <label>Convection vB [m/s]</label>
+                <input type="number" id="vbVal" value="0.2" step="0.05" onchange="updateSimMath()">
+            </div>
+            <div class="input-group">
+                <label>Optical Power P [W]</label>
+                <input type="number" id="pUR" value="0.8" step="0.1" onchange="updateSimMath()">
+            </div>
+
+            <div class="equation-box">
+                \[ R_{total}(t) = R_{Radial} + R_{Conal} \]
+            </div>
         </div>
     </div>
-
-    <div class="section-title">Live Hardware Status</div>
-    <div class="dash-grid" id="zone-grid"></div>
-
-    <button class="layer-toggle" onclick="togglePanel('general-panel')">🔧 Toggle General Settings</button>
-    <div id="general-panel" class="hidden-panel">
-        <div class="section-title">Hardware & Population</div>
-        <div class="input-group">
-            <label>Number of Units</label>
-            <input type="number" id="setUnits" value="9" min="1" max="24">
-        </div>
-        <div class="input-group">
-            <label>Warehouse Workers</label>
-            <input type="number" id="setPeople" value="6" min="0" max="30">
-        </div>
-
-        <div class="section-title">Operational Ranges</div>
-        <div class="input-group">
-            <label>Conal Radius [m]</label>
-            <input type="number" id="setConalRad" value="4.0" step="0.5" min="1.0" max="10.0">
-        </div>
-        <div class="input-group">
-            <label>Radial Radius [m]</label>
-            <input type="number" id="setRadialRad" value="6.0" step="0.5" min="2.0" max="15.0">
-        </div>
-
-        <div class="section-title">Color Configuration</div>
-        <div class="input-group">
-            <label>Conal Mode Color</label>
-            <input type="color" id="setConalColor" value="#d63384">
-        </div>
-        <div class="input-group">
-            <label>Radial Mode Color</label>
-            <input type="color" id="setRadialColor" value="#0bc5ea">
-        </div>
-
-        <button class="btn-apply" onclick="applySettings()">APPLY & REBUILD SCENE</button>
-    </div>
-
-    <button class="layer-toggle" onclick="togglePanel('engineering-panel')">⚙️ Toggle Engineering Math</button>
-    <div id="engineering-panel" class="hidden-panel">
-        <div class="section-title">Pathogen Settings</div>
-        <div class="input-group">
-            <label>Target (κ) [m²/J]</label>
-            <select id="virus" onchange="updateSimMath()">
-                <option value="0.350">SARS-CoV-2 (0.350)</option>
-                <option value="0.110">Measles (0.110)</option>
-                <option value="0.080">Influenza A (0.080)</option>
-                <option value="0.060">Tuberculosis (0.060)</option>
-            </select>
-        </div>
-
-        <div class="section-title conal-accent">Conal Mode Physics</div>
-        <div class="input-group">
-            <label>Airflow G [m³/s]</label>
-            <input type="number" id="gVal" value="12.0" step="1.0" onchange="updateSimMath()">
-        </div>
-        <div class="input-group">
-            <label>Optical Power P [W]</label>
-            <input type="number" id="pS6" value="1.2" step="0.1" onchange="updateSimMath()">
-        </div>
-
-        <div class="section-title radial-accent">Radial Mode Physics</div>
-        <div class="input-group">
-            <label>Convection vB [m/s]</label>
-            <input type="number" id="vbVal" value="0.2" step="0.05" onchange="updateSimMath()">
-        </div>
-        <div class="input-group">
-            <label>Optical Power P [W]</label>
-            <input type="number" id="pUR" value="0.8" step="0.1" onchange="updateSimMath()">
-        </div>
-
-        <div class="equation-box">
-            \[ R_{total}(t) = R_{Radial} + R_{Conal} \]
-        </div>
+    
+    <div class="sidebar-toggle-tab" onclick="toggleSidebar()">
+        <span>SETTINGS</span>
     </div>
 </div>
 
 <div class="main-view" id="canvas-container">
+    <div id="safety-banner">⚠️ RADIOMETRIC SAFETY LIMIT EXCEEDED (> 0.1 µW/cm² at 2.1m)</div>
+
     <button id="btn-cinematic" class="btn-cinematic" onclick="toggleCinematic()">CINEMATIC ORBIT: OFF</button>
     <div class="overlay-instruction">🖱️ Left Click: Rotate | Right Click: Pan | Scroll: Zoom</div>
     <div class="legend">
@@ -198,24 +245,50 @@
 </div>
 
 <script>
-    // 🌟 DYNAMIC GLOBALS
+    // 🌟 COLLAPSIBLE LOGIC
+    function toggleSidebar() {
+        document.getElementById('sidebar-container').classList.toggle('expanded');
+    }
+
     let HEX_COLORS = { 
         worker: 0xeab308, 
         conal: 0xd63384, 
         radial: 0x0bc5ea 
     };
 
+    const OPTICS = {
+        die_size: 1.5, dy: 0.0, dx: 0.0, baffle_deg: 0.0,
+        R_REF: 58.3, H_REF: 48.3, H_BOT: 8.3, FOCAL: 10.0, REF_EFF: 0.80
+    };
+
     let SIM_ZONES = [];
     let PEOPLE = [];
     let zoneMeshes = {};
     let humanMeshes = [];
+    
+    let roomGroup = new THREE.Group();
+    let shelfGroup = new THREE.Group();
+
     let currentConalRadius = 4.0;
     let currentRadialRadius = 6.0;
+    let currentRoomHeight = 8.0; 
+    let lastHeavyCalcTime = 0;
 
     const ROOM_X = 30;
     const ROOM_Z = 40;
-    const ROOM_HEIGHT = 8.0; // 8-Meter High Industrial Ceilings
-    const FURNITURE_BOUNDS = [];
+    let FURNITURE_BOUNDS = [];
+
+    function toggleContrib() {
+        const panel = document.getElementById('contrib-panel');
+        const btn = document.getElementById('contrib-btn');
+        if (panel.style.display === 'block') {
+            panel.style.display = 'none';
+            btn.innerText = '▼ Show Mode Contributions';
+        } else {
+            panel.style.display = 'block';
+            btn.innerText = '▲ Hide Mode Contributions';
+        }
+    }
 
     function togglePanel(id) {
         const panel = document.getElementById(id);
@@ -234,7 +307,8 @@
     class Person {
         constructor(id) {
             this.id = id;
-            this.speed = (1.0 + Math.random() * 0.5); 
+            // 🌟 FIXED SPEED: All workers now move at a consistent, solid pace to prevent "crawling" 
+            this.speed = 1.6; 
             this.pickTarget(true); 
             this.x = this.tx;
             this.z = this.tz;
@@ -254,9 +328,8 @@
             let valid = false;
             let attempts = 0;
             while (!valid && attempts < 50) {
-                // Focus AI on walking up and down the 3 warehouse aisles
-                let targetX = [-8, 0, 8][Math.floor(Math.random() * 3)];
-                this.tx = targetX + (Math.random() - 0.5) * 2; 
+                let targetX = [-12, -6, 0, 6, 12][Math.floor(Math.random() * 5)];
+                this.tx = targetX + (Math.random() - 0.5) * 1.5; 
                 this.tz = (Math.random() - 0.5) * (ROOM_Z - 4);
                 valid = this.isValidPos(this.tx, this.tz);
                 attempts++;
@@ -279,15 +352,15 @@
                     this.x = nx;
                     this.z = nz;
                 } else {
+                    // 🌟 FIXED BUG: Instead of sliding slowly against shelves, workers now immediately pick a new destination to keep moving smoothly
                     this.pickTarget(); 
                 }
             }
         }
     }
 
-    // 🌟 DYNAMIC MATH INTEGRATION
     function updateSimMath() {
-        const vol_m3 = ROOM_X * ROOM_Z * ROOM_HEIGHT;
+        const vol_m3 = ROOM_X * ROOM_Z * currentRoomHeight;
         const g_m3s = parseFloat(document.getElementById('gVal').value);
         const pS6 = parseFloat(document.getElementById('pS6').value);
         const pUR = parseFloat(document.getElementById('pUR').value);
@@ -301,12 +374,11 @@
             if(z.occupied) countActUrMode++; else countActS6Mode++;
         });
 
-        let s6Mode_EACH = (vol_m3 > 0) ? (countActS6Mode * g_m3s / vol_m3) * (1 - Math.exp(-kappa * (pS6 * ROOM_HEIGHT / g_m3s))) * 3600 : 0;
+        let s6Mode_EACH = (vol_m3 > 0) ? (countActS6Mode * g_m3s / vol_m3) * (1 - Math.exp(-kappa * (pS6 * currentRoomHeight / g_m3s))) * 3600 : 0;
         let totalUrMode_EACH = 0;
 
         if(vol_m3 > 0 && countActUrMode > 0) {
             let steps = 20;
-            // Radius parameter controls mathematical limits!
             let dr = (currentRadialRadius - 0.06)/steps; 
             let integral = 0;
             for(let i=0; i<steps; i++) {
@@ -323,8 +395,9 @@
         document.getElementById('eachVal').innerText = totalEACH.toFixed(2);
 
         const bar = document.getElementById('perfBar');
-        const pct = Math.min((totalEACH / 100) * 100, 100);
+        const pct = Math.min((totalEACH / 50) * 100, 100);
         bar.style.width = pct + '%';
+        
         const color = getBarColor(totalEACH);
         bar.style.backgroundColor = color;
         document.getElementById('eachVal').style.color = color;
@@ -334,7 +407,7 @@
         const g = document.getElementById('zone-grid'); g.innerHTML = "";
         SIM_ZONES.forEach(z => {
             let d = document.createElement('div'); d.className="zone-card"; d.id=`card-${z.id}`;
-            d.innerHTML = `<div class="zone-id">UNIT 0${z.id+1}</div><div class="zone-state" id="s-${z.id}">INIT</div>`;
+            d.innerHTML = `<div class="zone-id">UNIT ${(z.id+1).toString().padStart(2, '0')}</div><div class="zone-state" id="s-${z.id}">INIT</div>`;
             g.appendChild(d);
         });
         document.getElementById('ui-active-units').innerText = SIM_ZONES.length;
@@ -345,24 +418,23 @@
             let sEl = document.getElementById(`s-${z.id}`);
             let cEl = document.getElementById(`card-${z.id}`);
             if (z.occupied) {
-                sEl.innerText = "RADIAL MODE";
-                sEl.style.background = "var(--c-radial)";
-                cEl.style.borderColor = "var(--c-radial)";
+                if(sEl) sEl.innerText = "RADIAL MODE";
+                if(sEl) sEl.style.background = "var(--c-radial)";
+                if(cEl) cEl.style.borderColor = "var(--c-radial)";
             } else {
-                sEl.innerText = "CONAL MODE";
-                sEl.style.background = "var(--c-conal)";
-                cEl.style.borderColor = "var(--border)";
+                if(sEl) sEl.innerText = "CONAL MODE";
+                if(sEl) sEl.style.background = "var(--c-conal)";
+                if(cEl) cEl.style.borderColor = "var(--border)";
             }
         });
     }
 
-    // === 2. THREE.JS SCENE SETUP ===
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x334155); 
 
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 48, 48);
+    camera.position.set(0, 5, 23);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
@@ -388,6 +460,9 @@
     dirLight.shadow.camera.bottom = -30;
     scene.add(dirLight);
 
+    scene.add(roomGroup);
+    scene.add(shelfGroup);
+
     let isCinematic = false;
     function toggleCinematic() {
         isCinematic = !isCinematic;
@@ -406,17 +481,50 @@
                 brightness: { value: 1.0 }, 
                 contrast: { value: 1.0 }    
             },
-            vertexShader: `void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+            vertexShader: `
+                varying vec3 vNormal;
+                varying vec3 vViewPosition;
+                varying vec2 vUv;
+                
+                void main() {
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    vViewPosition = -mvPosition.xyz; 
+                    vNormal = normalMatrix * normal; 
+                    vUv = uv; 
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
             fragmentShader: `
-                uniform vec3 baseColor; uniform float baseOpacity; uniform float brightness; uniform float contrast;
+                uniform vec3 baseColor; 
+                uniform float baseOpacity; 
+                uniform float brightness; 
+                uniform float contrast;
+                
+                varying vec3 vNormal;
+                varying vec3 vViewPosition;
+                varying vec2 vUv;
+
                 void main() {
                     vec3 c = baseColor * brightness;
                     c = (c - 0.5) * contrast + 0.5;
                     c = clamp(c, 0.0, 1.0);
-                    gl_FragColor = vec4(c, baseOpacity);
+
+                    vec3 normal = normalize(vNormal);
+                    vec3 viewDir = normalize(vViewPosition);
+
+                    float rim = 1.0 - max(dot(viewDir, normal), 0.0);
+                    float rimPower = smoothstep(0.1, 1.0, rim);
+
+                    float verticalFade = smoothstep(0.0, 0.9, vUv.y);
+
+                    float finalOpacity = baseOpacity * (rimPower * 1.8 + 0.15) * verticalFade;
+
+                    gl_FragColor = vec4(c, finalOpacity);
                 }
             `,
-            transparent: true, depthWrite: false, side: THREE.DoubleSide,
+            transparent: true, 
+            depthWrite: false, 
+            side: THREE.DoubleSide,
             blending: isAdditive ? THREE.AdditiveBlending : THREE.NormalBlending
         });
     }
@@ -427,29 +535,37 @@
         renderer.setSize(container.clientWidth, container.clientHeight);
     });
 
-    // 🌟 FULLY DYNAMIC APPLY FUNCTION
+    function clearGroup(group) {
+        for (let i = group.children.length - 1; i >= 0; i--) {
+            let obj = group.children[i];
+            group.remove(obj);
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                else obj.material.dispose();
+            }
+        }
+    }
+
     function applySettings() {
-        // Read UI inputs
         const numUnits = parseInt(document.getElementById('setUnits').value);
         const numPeople = parseInt(document.getElementById('setPeople').value);
+        currentRoomHeight = parseFloat(document.getElementById('setHeight').value);
         currentConalRadius = parseFloat(document.getElementById('setConalRad').value);
         currentRadialRadius = parseFloat(document.getElementById('setRadialRad').value);
 
         const cColor = document.getElementById('setConalColor').value;
         const rColor = document.getElementById('setRadialColor').value;
 
-        // Update CSS Variables natively
         document.documentElement.style.setProperty('--c-conal', cColor);
         document.documentElement.style.setProperty('--c-radial', rColor);
-
-        // Update Hex memory
         HEX_COLORS.conal = parseInt(cColor.replace('#', '0x'));
         HEX_COLORS.radial = parseInt(rColor.replace('#', '0x'));
 
-        // 1. Clean up old 3D elements safely
         humanMeshes.forEach(h => scene.remove(h));
         humanMeshes = [];
         PEOPLE = [];
+        FURNITURE_BOUNDS.length = 0;
 
         for (let id in zoneMeshes) {
             let zm = zoneMeshes[id];
@@ -458,32 +574,32 @@
             scene.remove(zm.spotLight);
             scene.remove(zm.spotTarget);
             scene.remove(zm.radial);
-            // Free memory
             zm.cone.geometry.dispose(); zm.cone.material.dispose();
             zm.radial.geometry.dispose(); zm.radial.material.dispose();
         }
         zoneMeshes = {};
         SIM_ZONES = [];
 
-        // 2. Rebuild Zones Array dynamically based on user count
-        const aisles = [-8, 0, 8];
+        clearGroup(roomGroup);
+        clearGroup(shelfGroup);
+        build3DRoom();
+        buildShelves();
+
+        const aisles = [-12, -6, 0, 6, 12];
         for (let i = 0; i < numUnits; i++) {
-            let aisleIndex = i % 3;
-            let row = Math.floor(i / 3);
-            let numRows = Math.ceil(numUnits / 3);
+            let aisleIndex = i % 5;
+            let row = Math.floor(i / 5);
+            let numRows = Math.ceil(numUnits / 5);
             
             let zPos = 0;
             if (numRows > 1) {
-                // Distribute evenly from back to front of warehouse
                 zPos = -14 + (28 / (numRows - 1)) * row;
             }
             SIM_ZONES.push({ id: i, x: aisles[aisleIndex], z: zPos, radius: currentConalRadius, occupied: false });
         }
 
-        // 3. Render the new Units to the scene
         build3DZones();
 
-        // 4. Rebuild AI People
         PEOPLE.push(...Array.from({length: numPeople}, (_, i) => new Person(i)));
         PEOPLE.forEach((p) => {
             const h = createHumanMesh();
@@ -492,9 +608,9 @@
             humanMeshes.push(h);
         });
 
-        // 5. Update Math and UI Dashboard
         initDashboard();
         updateSimMath();
+        lastHeavyCalcTime = 0; 
     }
 
     function build3DRoom() {
@@ -511,12 +627,12 @@
         const floorMesh = new THREE.Mesh(floorGeo, floorMat);
         floorMesh.rotation.x = -Math.PI / 2;
         floorMesh.receiveShadow = true;
-        scene.add(floorMesh);
+        roomGroup.add(floorMesh);
 
         const wallMatSolid = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.95 }); 
         function addWall(cx, cz, w, d) {
-            let m = new THREE.Mesh(new THREE.BoxGeometry(w, ROOM_HEIGHT, d), wallMatSolid);
-            m.position.set(cx, ROOM_HEIGHT/2, cz); m.receiveShadow = true; scene.add(m);
+            let m = new THREE.Mesh(new THREE.BoxGeometry(w, currentRoomHeight, d), wallMatSolid);
+            m.position.set(cx, currentRoomHeight/2, cz); m.receiveShadow = true; roomGroup.add(m);
         }
         addWall(0, -ROOM_Z/2 - 0.1, ROOM_X, 0.2); 
         addWall(-ROOM_X/2 - 0.1, 0, 0.2, ROOM_Z); 
@@ -525,8 +641,8 @@
         const trussMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6, roughness: 0.5 });
         for(let tz = -ROOM_Z/2 + 2; tz < ROOM_Z/2; tz += 4) {
             let truss = new THREE.Mesh(new THREE.BoxGeometry(ROOM_X, 0.2, 0.2), trussMat);
-            truss.position.set(0, ROOM_HEIGHT, tz);
-            scene.add(truss);
+            truss.position.set(0, currentRoomHeight, tz);
+            roomGroup.add(truss);
         }
     }
 
@@ -540,13 +656,15 @@
         ];
 
         const rackPositions = [
-            {x: -4, z: -10}, {x: -4, z: 10},
-            {x: 4, z: -10},  {x: 4, z: 10}
+            {x: -9, z: -10}, {x: -9, z: 10},
+            {x: -3, z: -10}, {x: -3, z: 10},
+            {x: 3, z: -10},  {x: 3, z: 10},
+            {x: 9, z: -10},  {x: 9, z: 10}
         ];
 
         rackPositions.forEach(pos => {
             const rackGroup = new THREE.Group();
-            const rW = 2.5, rH = 6.0, rD = 16.0; 
+            const rW = 1.5, rH = 4.0, rD = 16.0; 
 
             for(let lx of [-rW/2+0.1, rW/2-0.1]) {
                 for(let lz of [-rD/2+0.1, -rD/6, rD/6, rD/2-0.1]) {
@@ -557,7 +675,7 @@
                 }
             }
 
-            for(let sy of [1.5, 3.0, 4.5, 6.0]) {
+            for(let sy of [1.0, 2.5, 4.0]) {
                 let shelf = new THREE.Mesh(new THREE.BoxGeometry(rW, 0.1, rD), shelfMat);
                 shelf.position.y = sy;
                 shelf.castShadow = true; shelf.receiveShadow = true;
@@ -565,9 +683,11 @@
 
                 for(let bz = -rD/2 + 0.6; bz < rD/2 - 0.5; bz += 1.2) {
                     if(Math.random() > 0.2) { 
-                        let bw = 1.0 + Math.random()*0.8; let bh = 0.6 + Math.random()*0.8; let bd = 0.8 + Math.random()*0.3;
+                        let bw = 0.5 + Math.random()*0.8; 
+                        let bh = 0.6 + Math.random()*0.8; 
+                        let bd = 0.8 + Math.random()*0.3;
                         let box = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), boxMats[Math.floor(Math.random()*boxMats.length)]);
-                        box.position.set((Math.random()-0.5)*0.5, sy + bh/2 + 0.05, bz);
+                        box.position.set((Math.random()-0.5)*0.2, sy + bh/2 + 0.05, bz);
                         box.castShadow = true; box.receiveShadow = true;
                         rackGroup.add(box);
                     }
@@ -575,7 +695,7 @@
             }
 
             rackGroup.position.set(pos.x, 0, pos.z);
-            scene.add(rackGroup);
+            shelfGroup.add(rackGroup);
 
             FURNITURE_BOUNDS.push({
                 minX: pos.x - rW/2 - 0.5, maxX: pos.x + rW/2 + 0.5,
@@ -619,31 +739,29 @@
             ledRing.rotation.x = Math.PI / 2; ledRing.position.y = -0.04;
 
             fixtureGroup.add(bezel, core, ledRing);
-            fixtureGroup.position.set(z.x, ROOM_HEIGHT, z.z);
+            fixtureGroup.position.set(z.x, currentRoomHeight, z.z);
             scene.add(fixtureGroup);
 
-            // Dynamically sized Conal
-            const coneGeo = new THREE.ConeGeometry(z.radius, ROOM_HEIGHT, 32, 1, true);
-            coneGeo.translate(0, -ROOM_HEIGHT / 2, 0);
+            const coneGeo = new THREE.ConeGeometry(z.radius, currentRoomHeight, 32, 1, true);
+            coneGeo.translate(0, -currentRoomHeight / 2, 0);
             const coneMat = createBeamMaterial(HEX_COLORS.conal, 0.18, false);
             const cone = new THREE.Mesh(coneGeo, coneMat);
-            cone.position.set(z.x, ROOM_HEIGHT, z.z);
+            cone.position.set(z.x, currentRoomHeight, z.z);
 
             const spotLight = new THREE.SpotLight(HEX_COLORS.conal, 3.5); 
-            spotLight.position.set(z.x, ROOM_HEIGHT, z.z);
-            spotLight.angle = Math.atan(z.radius / ROOM_HEIGHT);
-            spotLight.penumbra = 0.5; spotLight.distance = ROOM_HEIGHT * 1.5;
+            spotLight.position.set(z.x, currentRoomHeight, z.z);
+            spotLight.angle = Math.atan(z.radius / currentRoomHeight);
+            spotLight.penumbra = 0.5; spotLight.distance = currentRoomHeight * 1.5;
             const spotTarget = new THREE.Object3D(); spotTarget.position.set(z.x, 0, z.z);
             scene.add(spotTarget); spotLight.target = spotTarget;
             scene.add(cone, spotLight);
 
-            // Dynamically sized Radial
             const urHeight = 0.6;
             const radialGeo = new THREE.ConeGeometry(currentRadialRadius, urHeight, 32, 1, true);
             radialGeo.translate(0, urHeight / 2, 0);
             const radialMat = createBeamMaterial(HEX_COLORS.radial, 0.15, true);
             const radial = new THREE.Mesh(radialGeo, radialMat);
-            radial.position.set(z.x, ROOM_HEIGHT - urHeight, z.z);
+            radial.position.set(z.x, currentRoomHeight - urHeight, z.z);
             radial.visible = false;
             scene.add(radial);
 
@@ -651,7 +769,6 @@
         });
     }
 
-    // === 3. CORE LOOP ===
     let lastTime = performance.now();
 
     function updateSimulation() {
@@ -664,7 +781,6 @@
         SIM_ZONES.forEach(z => {
             z.occupied = false;
             for(let p of PEOPLE) {
-                // Collision checks using dynamic radius!
                 if(Math.hypot(p.x - z.x, p.z - z.z) < z.radius) {
                     z.occupied = true; break;
                 }
@@ -691,12 +807,77 @@
 
             if (moveDist > 0.001) {
                 mesh.rotation.y = Math.atan2(dx, dz);
+                // Matched animation speed to the new standard 1.6 movement speed
                 rig.walkCycle += moveDist * 6;
                 let swing = Math.sin(rig.walkCycle) * 0.5;
                 rig.legL.rotation.x = swing; rig.legR.rotation.x = -swing;
                 rig.armL.rotation.x = -swing; rig.armR.rotation.x = swing;
             }
         });
+
+        if (now - lastHeavyCalcTime > 500) {
+            lastHeavyCalcTime = now;
+            
+            let tilt_rad = Math.atan(-OPTICS.dy / OPTICS.FOCAL);
+            let spread_rad = Math.abs(OPTICS.dx) / (OPTICS.FOCAL * 1.5);
+            let scallop_mean_rad = (0.32) * (Math.PI/180);
+            let div_angle_rad = Math.atan((OPTICS.die_size / 2.0) / OPTICS.FOCAL);
+            
+            const pUR = parseFloat(document.getElementById('pUR').value) || 0.4;
+            const P_eff_uw = pUR * OPTICS.REF_EFF * 1000000;
+            const h_install = currentRoomHeight * 1000;
+
+            let max_irradiance_2100 = 0;
+
+            for (let px = -ROOM_X/2; px <= ROOM_X/2; px += 1.0) {
+                for (let pz = -ROOM_Z/2; pz <= ROOM_Z/2; pz += 1.0) {
+                    let E_total = 0;
+
+                    SIM_ZONES.forEach(z => {
+                        if (!z.occupied) return;
+
+                        let r_m = Math.hypot(px - z.x, pz - z.z);
+                        let r_mm = r_m * 1000;
+                        if (r_mm < OPTICS.R_REF) return;
+
+                        let z_top_local = OPTICS.H_REF + (r_mm - OPTICS.R_REF) * Math.tan(scallop_mean_rad + tilt_rad + spread_rad);
+                        let z_bot_local = OPTICS.H_BOT + (r_mm - OPTICS.R_REF) * Math.tan(tilt_rad - spread_rad);
+                        let geom_thickness = Math.max(z_top_local - z_bot_local, 1.0);
+
+                        let y_center_global = h_install - (z_top_local + z_bot_local) / 2.0;
+
+                        let slant_D_mm = Math.sqrt(r_mm*r_mm + Math.pow(y_center_global - 2100, 2));
+                        let optical_spread = slant_D_mm * Math.tan(div_angle_rad);
+
+                        let sigma_mm = Math.max(Math.sqrt(Math.pow(geom_thickness/3.46, 2) + Math.pow(optical_spread/2.0, 2)), 0.5);
+                        let sigma_cm = sigma_mm / 10.0;
+                        let r_cm = r_mm / 10.0;
+
+                        let area_cm2 = 2 * Math.PI * r_cm * (sigma_cm * Math.sqrt(2 * Math.PI));
+                        let E_peak = P_eff_uw / area_cm2;
+
+                        let E_2100 = E_peak * Math.exp(-0.5 * Math.pow((2100 - y_center_global) / sigma_mm, 2));
+                        E_total += E_2100;
+                    });
+
+                    if (E_total > max_irradiance_2100) max_irradiance_2100 = E_total;
+                }
+            }
+
+            let irrVal = document.getElementById('irradianceVal');
+            let banner = document.getElementById('safety-banner');
+            
+            if(irrVal) {
+                irrVal.innerText = max_irradiance_2100.toFixed(3) + " µW/cm²";
+                if (max_irradiance_2100 > 0.10) {
+                    irrVal.style.color = '#dc2626';
+                    if(banner) banner.style.display = 'block';
+                } else {
+                    irrVal.style.color = '#16a34a';
+                    if(banner) banner.style.display = 'none';
+                }
+            }
+        }
     }
 
     function animate() {
@@ -706,10 +887,7 @@
         renderer.render(scene, camera);
     }
 
-    // Initialize application securely
-    build3DRoom();
-    buildShelves();
-    applySettings(); // Runs initial generation of grids, people, and maths
+    applySettings(); 
     animate();
 
 </script>

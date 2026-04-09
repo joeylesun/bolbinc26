@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SUVOS 6 - PUBLIC BATHROOM DEMO</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg: #ffffff; --panel: #f9fafb; --border: #e5e7eb;
+            --c-wall: #2563eb;
+            --c-conal: #b0266e;   
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; color: #111; }
+
+        .sidebar-container {
+            position: fixed; left: 0; top: 0; bottom: 0; z-index: 1000;
+            display: flex; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-380px);
+        }
+        .sidebar-container.expanded { transform: translateX(0); }
+
+        .sidebar { box-sizing: border-box; width: 380px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px; box-shadow: 10px 0 30px rgba(0,0,0,0.3); overflow-y: auto; }
+        
+        .sidebar-toggle-tab {
+            width: 32px; height: 120px; background: var(--c-wall); color: white;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border-radius: 0 8px 8px 0; margin-top: 40px;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+        }
+        .sidebar-toggle-tab span {
+            writing-mode: vertical-rl; transform: rotate(180deg);
+            font-size: 0.65rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap;
+        }
+
+        h2 { margin: 0 0 15px 0; color: var(--c-wall); border-bottom: 2px solid var(--c-wall); padding-bottom: 10px; font-size: 1.4rem; font-weight: 800; text-transform: uppercase; }
+
+        .status-badge { text-align:center; padding:8px; margin-bottom:15px; font-weight:700; font-size:0.75rem; border-radius:4px; background:#dcfce7; color:#166534; }
+
+        #result-box { margin-bottom: 15px; padding: 15px; border-radius: 8px; border-left: 6px solid var(--c-wall); background: #f0f9ff; }
+        
+        .each-display { font-weight: 800; margin-top:12px; font-size: 1.5em; color: #333; text-align: center; }
+        .each-subtitle { font-size: 0.45em; font-weight: 600; color: #666; margin-top: 4px; text-transform: none; }
+
+        .perf-track { width: 100%; height: 16px; background: #e2e8f0; border-radius: 8px; margin-top: 15px; overflow: hidden; border: 1px solid #ccc; position: relative; }
+        .perf-bar { height: 100%; width: 0%; transition: width 0.2s ease-out, background-color 0.2s ease; }
+        .target-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #222; z-index: 5; box-shadow: 1px 0 2px rgba(0,0,0,0.3); }
+        .perf-label { font-size: 0.75em; color: #666; position: relative; height: 20px; margin-top: 4px; font-weight: 600; }
+        .lbl { position: absolute; transform: translateX(-50%); }
+
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; overflow-y: auto; max-height: 200px; margin-bottom: 15px; padding-right: 5px;}
+        .dash-grid::-webkit-scrollbar { width: 6px; }
+        .dash-grid::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        .zone-card { background: #fff; border: 1px solid var(--c-conal); border-radius: 6px; padding: 8px; text-align: center; transition: border-color 0.2s; }
+        .zone-id { font-size: 0.85rem; font-weight: 800; margin-bottom: 4px; color: #333; }
+        .zone-state { font-size: 0.75rem; font-weight: 700; padding: 3px 6px; border-radius: 4px; color: #fff; text-transform: uppercase; display: inline-block; background: var(--c-conal); transition: background 0.2s; }
+
+        .layer-toggle { width: 100%; padding: 10px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; margin-bottom: 10px; color: #4a5568; transition: background 0.2s;}
+        .layer-toggle:hover { background: #cbd5e0; }
+        .hidden-panel { display: none; margin-bottom: 10px; border-top: 1px solid #ddd; padding-top: 10px; }
+
+        .section-title { font-size: 0.8em; font-weight: bold; color: #555; margin: 10px 0 5px 0; text-transform: uppercase; }
+        .input-group { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .input-group label { font-size: 0.8em; font-weight: 600; color: #444; }
+        .input-group input, .input-group select { width: 45%; padding: 6px; border: 1px solid #ccd; border-radius: 4px; box-sizing: border-box; font-size: 0.85em; }
+        
+        .equation-box { background: #1a1a1a; color: #fff; padding: 10px; border-radius: 8px; margin-top: 15px; text-align: center; font-size:0.9em; overflow-x: auto;}
+        
+        .btn-apply { background: #166534; color: white; padding: 10px; width: 100%; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+        .btn-apply:hover { background: #14532d; }
+
+        .main-view { flex-grow: 1; position: relative; background: #e2e8f0; } 
+        canvas { display: block; width: 100%; height: 100%; outline: none; }
+
+        .btn-cinematic { position: absolute; top: 20px; right: 20px; background: var(--c-wall); color: white; padding: 8px 16px; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 5; }
+        .overlay-instruction { position: absolute; top: 20px; left: 60px; background: rgba(0,0,0,0.6); color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; pointer-events: none; z-index: 5; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar-container" id="sidebar-container">
+    <div class="sidebar">
+        <h2>SUVOS 6 DEMO</h2>
+        <div class="status-badge">PUBLIC BATHROOM FACILITY</div>
+
+        <div id="result-box">
+            <div style="font-size: 0.85em; display:flex; justify-content:space-between; margin-bottom: 10px; color:#555; font-weight:bold;">
+                <span>Facility Area: <span id="ui-area" style="color:#000;">200 m²</span></span>
+                <span>Active Units: <span id="ui-active-units" style="color:#000;">8 / 8</span></span>
+            </div>
+
+            <div class="each-display">
+                TOTAL PROTECTION (eACH): <span id="eachVal">0.00</span>
+                <div class="each-subtitle">*Equivalent Air Changes per Hour</div>
+            </div>
+
+            <div class="perf-track">
+                <div class="target-line" title="Clinical Target (12 eACH)" style="left: 24%;"></div>
+                <div id="perfBar" class="perf-bar"></div>
+            </div>
+            <div class="perf-label">
+                <span class="lbl" style="left:0%">0</span>
+                <span class="lbl" style="left:24%; color:#222; font-weight:bold;">12</span>
+                <span class="lbl" style="left:50%">25</span>
+                <span class="lbl" style="left:100%">50+</span>
+            </div>
+        </div>
+
+        <button class="layer-toggle" onclick="togglePanel('zone-grid')" style="background: #cbd5e1;">📋 Toggle Live Hardware Status</button>
+        <div class="dash-grid" id="zone-grid" style="display: none;"></div>
+
+        <button class="layer-toggle" onclick="togglePanel('general-panel')">🔧 Toggle General Settings</button>
+        <div id="general-panel" class="hidden-panel">
+            <div class="section-title">Environment & Population</div>
+            <div class="input-group">
+                <label>Occupants (Max)</label>
+                <input type="number" id="setPeople" value="3" min="0" max="15">
+            </div>
+            <div class="input-group">
+                <label>Ceiling Height [m]</label>
+                <input type="number" id="setHeight" value="3.5" step="0.5" min="2.5" max="10.0">
+            </div>
+            <div class="input-group">
+                <label>Conal Mode Color</label>
+                <input type="color" id="setConalColor" value="#b0266e">
+            </div>
+
+            <button class="btn-apply" onclick="applySettings()">APPLY & REBUILD SCENE</button>
+        </div>
+
+        <button class="layer-toggle" onclick="togglePanel('engineering-panel')">⚙️ Toggle Engineering Math</button>
+        <div id="engineering-panel" class="hidden-panel">
+            <div class="section-title">Pathogen Settings</div>
+            <div class="input-group">
+                <label>Target (κ) [m²/J]</label>
+                <select id="virus" onchange="updateSimMath()">
+                    <option value="0.350">SARS-CoV-2 (0.350)</option>
+                    <option value="0.110">Measles (0.110)</option>
+                    <option value="0.080">Influenza A (0.080)</option>
+                    <option value="0.060">Tuberculosis (0.060)</option>
+                </select>
+            </div>
+
+            <div class="section-title" style="color: var(--c-conal);">Conal Mode Physics</div>
+            <div class="input-group">
+                <label>Airflow G [m³/s]</label>
+                <input type="number" id="gVal" value="8.0" step="1.0" onchange="updateSimMath()">
+            </div>
+            <div class="input-group">
+                <label>Optical Power P [W]</label>
+                <input type="number" id="pS6" value="1.2" step="0.1" onchange="updateSimMath()">
+            </div>
+
+            <div class="equation-box">
+                \[ R_{total}(t) = R_{Conal} \]
+            </div>
+        </div>
+    </div>
+    
+    <div class="sidebar-toggle-tab" onclick="toggleSidebar()">
+        <span>SETTINGS</span>
+    </div>
+</div>
+
+<div class="main-view" id="canvas-container">
+    <div class="overlay-instruction">🖱️ Left Click: Rotate | Right Click: Pan | Scroll: Zoom</div>
+</div>
+
+<script>
+    function toggleSidebar() {
+        document.getElementById('sidebar-container').classList.toggle('expanded');
+    }
+
+    let HEX_COLORS = { conal: 0xd63384 };
+
+    let SIM_ZONES = [];
+    let PEOPLE = [];
+    let zoneMeshes = {};
+    let humanMeshes = [];
+    let roomGroup = new THREE.Group();
+    let bathroomGroup = new THREE.Group();
+    
+    window.stallDoors = [];
+    let FURNITURE_BOUNDS = []; 
+
+    let currentRoomHeight = 3.5; 
+
+    // Global layout variables
+    const ROOM_X = 10;
+    const ROOM_Z = 20;
+    const stallDepth = 3.8;
+    const stallWidth = 2.6;
+    const numStalls = 6; 
+    
+    // Shifted heavily toward the far wall (z=10). Centers will be: -4.3, -1.7, +0.9, +3.5, +6.1, +8.7
+    const startZ = -5.6; 
+
+    // 3 EXCLUSIVE SCRIPTS 
+    const SCRIPTS = [
+        // Person 1: Far Stall (z=8.7) -> Sink 2 (z=2.0)
+        [
+            { x: 0, z: -9.5, action: 'walk' },
+            { x: -0.5, z: 6.1, action: 'walk' },
+            { x: -3.0, z: 6.1, action: 'stall' },
+            { x: -0.5, z: 6.1, action: 'walk' },
+            { x: 1.0, z: 2.0, action: 'walk' },
+            { x: 3.6, z: 2.0, action: 'wash' },
+            { x: 1.0, z: 2.0, action: 'walk' },
+            { x: 0, z: -9.5, action: 'exit' }
+        ],
+        // Person 2: Sink 1 Only (z=-2.0)
+        [
+            { x: 0, z: -9.5, action: 'walk' },
+            { x: 1.0, z: -4.0, action: 'walk' },
+            { x: 3.6, z: -4.0, action: 'wash' },
+            { x: 1.0, z: -4.0, action: 'walk' },
+            { x: 0, z: -9.5, action: 'exit' }
+        ],
+        // Person 3: Middle Stall (z=0.9) -> Sink 1 (z=-2.0)
+        [
+            { x: 0, z: -9.5, action: 'walk' },
+            { x: -0.5, z: 0.9, action: 'walk' },
+            { x: -3.0, z: 0.9, action: 'stall' },
+            { x: -0.5, z: 0.9, action: 'walk' },
+            { x: 1.0, z: -2.0, action: 'walk' },
+            { x: 3.6, z: -2.0, action: 'wash' },
+            { x: 1.0, z: -2.0, action: 'walk' },
+            { x: 0, z: -9.5, action: 'exit' }
+        ]
+    ];
+
+    function togglePanel(id) {
+        const panel = document.getElementById(id);
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function getBarColor(val) {
+        if(val < 3) return '#ff4444';
+        if(val < 6) return '#ffaa00';
+        if(val < 12) return '#d4d900';
+        if(val < 30) return '#38a169';
+        if(val < 60) return '#2f855a';
+        return '#0bc5ea';
+    }
+
+    class Person {
+        constructor(id) {
+            this.id = id;
+            this.speed = 1.8 + Math.random() * 0.4; 
+            
+            this.active = false;
+            this.respawnTimer = (id === 0) ? 0.5 : id * 3.0; // Stagger initial entry
+            
+            this.pausing = false;
+            this.pauseTimer = 0;
+            this.currentAction = 'walk';
+            this.waypoints = [];
+            this.targetIndex = 0;
+            this.x = 0;
+            this.z = -9.5;
+            this.tx = 0;
+            this.tz = -9.5;
+        }
+
+        spawn() {
+            let scriptIndex = this.id % SCRIPTS.length; 
+            this.waypoints = SCRIPTS[scriptIndex];
+            
+            this.active = true;
+            this.pausing = false;
+            this.currentAction = 'walk';
+            
+            this.x = this.waypoints[0].x;
+            this.z = this.waypoints[0].z;
+            
+            this.targetIndex = 1;
+            this.tx = this.waypoints[this.targetIndex].x;
+            this.tz = this.waypoints[this.targetIndex].z;
+        }
+
+        update(dt) {
+            if (!this.active) {
+                this.respawnTimer -= dt;
+                if (this.respawnTimer <= 0) {
+                    this.spawn();
+                }
+                return;
+            }
+
+            if (this.pausing) {
+                this.pauseTimer -= dt;
+                if (this.pauseTimer <= 0) {
+                    this.pausing = false;
+                    this.currentAction = 'walk';
+                    this.targetIndex++;
+                    if (this.targetIndex < this.waypoints.length) {
+                        this.tx = this.waypoints[this.targetIndex].x;
+                        this.tz = this.waypoints[this.targetIndex].z;
+                    }
+                }
+                return;
+            }
+
+            let dx = this.tx - this.x;
+            let dz = this.tz - this.z;
+            let dist = Math.hypot(dx, dz);
+            
+            if (dist < 0.1) {
+                let wp = this.waypoints[this.targetIndex];
+                
+                if (wp.action === 'exit') {
+                    this.active = false;
+                    this.respawnTimer = 2.0 + Math.random() * 4.0; 
+                } else if (wp.action === 'stall' || wp.action === 'wash') {
+                    this.pausing = true;
+                    this.pauseTimer = (wp.action === 'stall') ? 4.0 : 3.0; 
+                    this.currentAction = wp.action;
+                } else {
+                    this.targetIndex++;
+                    if (this.targetIndex < this.waypoints.length) {
+                        this.tx = this.waypoints[this.targetIndex].x;
+                        this.tz = this.waypoints[this.targetIndex].z;
+                    }
+                }
+            } else {
+                this.x += (dx/dist) * this.speed * dt;
+                this.z += (dz/dist) * this.speed * dt;
+            }
+        }
+    }
+
+    function updateSimMath() {
+        const vol_m3 = ROOM_X * ROOM_Z * currentRoomHeight;
+        const g_m3s = parseFloat(document.getElementById('gVal').value);
+        const pS6 = parseFloat(document.getElementById('pS6').value);
+        const kappa = parseFloat(document.getElementById('virus').value);
+
+        let countActS6Mode = 0;
+        SIM_ZONES.forEach(z => {
+            if (!z.occupied) countActS6Mode++;
+        });
+
+        let s6Mode_EACH = (vol_m3 > 0) ? (countActS6Mode * g_m3s / vol_m3) * (1 - Math.exp(-kappa * (pS6 * currentRoomHeight / g_m3s))) * 3600 : 0;
+        let totalEACH = s6Mode_EACH;
+
+        document.getElementById('eachVal').innerText = totalEACH.toFixed(2);
+
+        const bar = document.getElementById('perfBar');
+        const pct = Math.min((totalEACH / 50) * 100, 100);
+        bar.style.width = pct + '%';
+        
+        const color = getBarColor(totalEACH);
+        bar.style.backgroundColor = color;
+        document.getElementById('eachVal').style.color = color;
+    }
+
+    function initDashboard() {
+        const g = document.getElementById('zone-grid'); g.innerHTML = "";
+        SIM_ZONES.forEach(z => {
+            let d = document.createElement('div'); d.className="zone-card"; d.id=`card-${z.id}`;
+            let lbl = z.id < 6 ? `STALL ${z.id + 1}` : (z.id === 6 ? "SINK 1" : "SINK 2");
+            d.innerHTML = `<div class="zone-id">${lbl}</div><div class="zone-state" id="s-${z.id}">ACTIVE</div>`;
+            g.appendChild(d);
+        });
+        document.getElementById('ui-area').innerText = (ROOM_X * ROOM_Z) + " m²";
+        updateDashboard();
+    }
+
+    function updateDashboard() {
+        let activeCount = 0;
+        SIM_ZONES.forEach(z => {
+            let sEl = document.getElementById(`s-${z.id}`);
+            let cEl = document.getElementById(`card-${z.id}`);
+            if (z.occupied) {
+                if(sEl) sEl.innerText = "STANDBY";
+                if(sEl) sEl.style.background = "#64748b"; 
+                if(cEl) cEl.style.borderColor = "#cbd5e1";
+            } else {
+                activeCount++;
+                if(sEl) sEl.innerText = "ACTIVE";
+                if(sEl) sEl.style.background = "var(--c-conal)";
+                if(cEl) cEl.style.borderColor = "var(--c-conal)";
+            }
+        });
+        document.getElementById('ui-active-units').innerText = activeCount + " / " + SIM_ZONES.length;
+    }
+
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xd1d5db); 
+
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 10, 15); 
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 1, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5)); 
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(10, 20, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    scene.add(roomGroup);
+    scene.add(bathroomGroup);
+
+    let isCinematic = false;
+    function toggleCinematic() {
+        isCinematic = !isCinematic;
+        controls.autoRotate = isCinematic;
+        controls.autoRotateSpeed = 1.0;
+        const btn = document.getElementById('btn-cinematic');
+        btn.innerText = "CINEMATIC ORBIT: " + (isCinematic ? "ON" : "OFF");
+        btn.style.background = isCinematic ? "#059669" : "var(--c-wall)";
+    }
+
+    function createBeamMaterial(hexColor, initOpacity) {
+        return new THREE.ShaderMaterial({
+            uniforms: {
+                baseColor: { value: new THREE.Color(hexColor) },
+                baseOpacity: { value: initOpacity },
+                brightness: { value: 1.0 }, 
+                contrast: { value: 1.0 }    
+            },
+            vertexShader: `
+                varying vec3 vNormal;
+                varying vec3 vViewPosition;
+                varying vec2 vUv;
+                void main() {
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    vViewPosition = -mvPosition.xyz; 
+                    vNormal = normalMatrix * normal; 
+                    vUv = uv; 
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 baseColor; 
+                uniform float baseOpacity; 
+                varying vec3 vNormal;
+                varying vec3 vViewPosition;
+                varying vec2 vUv;
+
+                void main() {
+                    vec3 viewDir = normalize(vViewPosition);
+                    float rim = 1.0 - max(dot(viewDir, normalize(vNormal)), 0.0);
+                    float rimPower = smoothstep(0.1, 1.0, rim);
+                    float verticalFade = smoothstep(0.0, 0.9, vUv.y);
+                    float finalOpacity = baseOpacity * (rimPower * 1.8 + 0.15) * verticalFade;
+                    gl_FragColor = vec4(baseColor, finalOpacity);
+                }
+            `,
+            transparent: true, 
+            depthWrite: false, 
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending
+        });
+    }
+
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    function clearGroup(group) {
+        for (let i = group.children.length - 1; i >= 0; i--) {
+            let obj = group.children[i];
+            group.remove(obj);
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                else obj.material.dispose();
+            }
+        }
+    }
+
+    function applySettings() {
+        const numPeople = parseInt(document.getElementById('setPeople').value);
+        currentRoomHeight = parseFloat(document.getElementById('setHeight').value);
+
+        const cColor = document.getElementById('setConalColor').value;
+        document.documentElement.style.setProperty('--c-conal', cColor);
+        HEX_COLORS.conal = parseInt(cColor.replace('#', '0x'));
+
+        humanMeshes.forEach(h => scene.remove(h));
+        humanMeshes = [];
+        PEOPLE = [];
+        window.stallDoors = [];
+        FURNITURE_BOUNDS = []; 
+
+        for (let id in zoneMeshes) {
+            let zm = zoneMeshes[id];
+            scene.remove(zm.fixtureGroup);
+            scene.remove(zm.cone);
+            scene.remove(zm.spotLight);
+            scene.remove(zm.spotTarget);
+            zm.cone.geometry.dispose(); zm.cone.material.dispose();
+        }
+        zoneMeshes = {};
+        SIM_ZONES = [];
+
+        clearGroup(roomGroup);
+        clearGroup(bathroomGroup);
+        build3DRoom();
+        buildBathroom();
+
+        // 1. PLACE 6 UNITS OVER STALLS (Radius: 1.3m to fit strictly inside the stall)
+        for (let i = 0; i < numStalls; i++) {
+            let zCenter = startZ + (i * stallWidth) + (stallWidth/2);
+            SIM_ZONES.push({ id: i, x: -ROOM_X/2 + stallDepth/2, z: zCenter, radius: 1.3, occupied: false });
+        }
+
+        // 2. PLACE 2 UNITS OVER SINKS (Radius: 1.8m to cover wash area)
+        SIM_ZONES.push({ id: 6, x: 3.8, z: -3.0, radius: 1.8, occupied: false });
+        SIM_ZONES.push({ id: 7, x: 3.8, z: 2.0, radius: 1.8, occupied: false });
+
+        build3DZones();
+
+        // Setup Max People
+        PEOPLE.push(...Array.from({length: numPeople}, (_, i) => new Person(i)));
+        PEOPLE.forEach((p) => {
+            const h = createHumanMesh();
+            h.position.set(0, 0, -9.5); 
+            h.visible = false; 
+            scene.add(h);
+            humanMeshes.push(h);
+        });
+
+        initDashboard();
+        updateSimMath();
+    }
+
+    function build3DRoom() {
+        const floorGeo = new THREE.PlaneGeometry(ROOM_X, ROOM_Z);
+        const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
+        const ctx = canvas.getContext('2d'); 
+        ctx.fillStyle = '#e2e8f0'; ctx.fillRect(0,0,128,128); 
+        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.strokeRect(0,0,128,128);
+        const floorTex = new THREE.CanvasTexture(canvas); 
+        floorTex.wrapS = THREE.RepeatWrapping; floorTex.wrapT = THREE.RepeatWrapping; 
+        floorTex.repeat.set(ROOM_X, ROOM_Z); 
+
+        const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.5, metalness: 0.1 });
+        const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+        floorMesh.rotation.x = -Math.PI / 2;
+        floorMesh.receiveShadow = true;
+        roomGroup.add(floorMesh);
+
+        const wallMatSolid = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.9 }); 
+        const doorMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.8 });
+
+        function addWall(cx, cz, w, d) {
+            let m = new THREE.Mesh(new THREE.BoxGeometry(w, currentRoomHeight, d), wallMatSolid);
+            m.position.set(cx, currentRoomHeight/2, cz); m.receiveShadow = true; roomGroup.add(m);
+        }
+        
+        // Walls
+        addWall(0, -ROOM_Z/2 - 0.1, ROOM_X, 0.2); 
+        addWall(-ROOM_X/2 - 0.1, 0, 0.2, ROOM_Z); 
+        addWall(ROOM_X/2 + 0.1, 0, 0.2, ROOM_Z); 
+
+        // Back Door
+        let backDoor = new THREE.Mesh(new THREE.BoxGeometry(1.8, 2.5, 0.3), doorMat);
+        backDoor.position.set(0, 1.25, -ROOM_Z/2 + 0.05);
+        roomGroup.add(backDoor);
+    }
+
+    function buildBathroom() {
+        const stallMat = new THREE.MeshStandardMaterial({color: 0x94a3b8, roughness: 0.9}); 
+        const sinkCounterMat = new THREE.MeshStandardMaterial({color: 0x64748b, roughness: 0.2}); 
+        const porcelainMat = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.1});
+        const mirrorMat = new THREE.MeshStandardMaterial({color: 0xaaddff, metalness: 0.3, roughness: 0.1});
+        const dispenserMat = new THREE.MeshStandardMaterial({color: 0xe2e8f0, roughness: 0.5});
+
+        // 1. Build Stalls and Toilets
+        for (let i = 0; i < numStalls; i++) {
+            let zCenter = startZ + (i * stallWidth) + (stallWidth/2);
+            
+            // Stall Divider
+            let div = new THREE.Mesh(new THREE.BoxGeometry(stallDepth, 2.2, 0.1), stallMat);
+            div.position.set(-ROOM_X/2 + stallDepth/2, 2.2/2 + 0.2, zCenter - stallWidth/2);
+            div.castShadow = true; div.receiveShadow = true;
+            bathroomGroup.add(div);
+
+            // DYNAMIC HINGED STALL DOOR
+            let hingeGroup = new THREE.Group();
+            hingeGroup.position.set(-ROOM_X/2 + stallDepth, 2.2/2 + 0.2, zCenter - (stallWidth * 0.9)/2);
+            
+            let door = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.2, stallWidth * 0.9), stallMat);
+            door.position.set(0, 0, (stallWidth * 0.9)/2); 
+            door.castShadow = true; door.receiveShadow = true;
+            
+            hingeGroup.add(door);
+            hingeGroup.userData = { zCenter: zCenter }; 
+            bathroomGroup.add(hingeGroup);
+            window.stallDoors.push(hingeGroup);
+
+            // --- REALISTIC TOILET ASSEMBLY ---
+            let toiletGroup = new THREE.Group();
+            let tank = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.75, 0.55), porcelainMat);
+            tank.position.set(0.15, 0.6, 0); 
+            tank.castShadow = true; tank.receiveShadow = true;
+            toiletGroup.add(tank);
+
+            let base = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 0.45, 16), porcelainMat);
+            base.position.set(0.45, 0.225, 0);
+            base.castShadow = true; base.receiveShadow = true;
+            toiletGroup.add(base);
+
+            let bowl = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), porcelainMat);
+            bowl.scale.set(1.25, 1.0, 0.9); 
+            bowl.position.set(0.5, 0.45, 0);
+            bowl.rotation.x = Math.PI; 
+            bowl.castShadow = true; bowl.receiveShadow = true;
+            toiletGroup.add(bowl);
+
+            let seat = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.05, 12, 24), porcelainMat);
+            seat.scale.set(1.25, 1.0, 0.9); 
+            seat.rotation.x = Math.PI / 2; 
+            seat.position.set(0.5, 0.47, 0);
+            seat.castShadow = true; seat.receiveShadow = true;
+            toiletGroup.add(seat);
+
+            let lid = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.04, 24), porcelainMat);
+            lid.scale.set(1.25, 1.0, 0.9); 
+            lid.position.set(0.2, 0.75, 0); 
+            lid.rotation.z = Math.PI / 3.5; 
+            lid.castShadow = true; lid.receiveShadow = true;
+            toiletGroup.add(lid);
+
+            toiletGroup.position.set(-ROOM_X/2, 0, zCenter);
+            bathroomGroup.add(toiletGroup);
+        }
+        
+        let endDiv = new THREE.Mesh(new THREE.BoxGeometry(stallDepth, 2.2, 0.1), stallMat);
+        endDiv.position.set(-ROOM_X/2 + stallDepth/2, 2.2/2 + 0.2, startZ + (numStalls * stallWidth));
+        bathroomGroup.add(endDiv);
+
+        FURNITURE_BOUNDS.push({
+            minX: -ROOM_X/2, maxX: -ROOM_X/2 + stallDepth + 0.5,
+            minZ: startZ - 0.5, maxZ: startZ + (numStalls * stallWidth) + 0.5
+        });
+
+        // 2. Build Sinks, Counter, Mirror, Dispensers, and Faucets
+        const counterDepth = 1.2;
+        const counterLength = 10.0;
+        const counterHeight = 0.9;
+        
+        let counter = new THREE.Mesh(new THREE.BoxGeometry(counterDepth, counterHeight, counterLength), sinkCounterMat);
+        counter.position.set(ROOM_X/2 - counterDepth/2, counterHeight/2, 0);
+        counter.castShadow = true; counter.receiveShadow = true;
+        bathroomGroup.add(counter);
+
+        let mirror = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.4, counterLength), mirrorMat);
+        mirror.position.set(ROOM_X/2 - 0.05, counterHeight + 0.9, 0);
+        bathroomGroup.add(mirror);
+
+        for(let sz = -counterLength/2 + 1.0; sz < counterLength/2; sz += 2.0) {
+            let bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.2, 0.15, 16), porcelainMat);
+            bowl.position.set(ROOM_X/2 - counterDepth/2, counterHeight + 0.08, sz);
+            bathroomGroup.add(bowl);
+
+            let faucetGroup = new THREE.Group();
+            let fBase = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.15, 16), mirrorMat);
+            fBase.position.set(0, 0.075, 0);
+            let fSpout = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.15, 16), mirrorMat);
+            fSpout.rotation.z = Math.PI / 2;
+            fSpout.position.set(-0.06, 0.13, 0); 
+            let fTip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.015, 0.05, 16), mirrorMat);
+            fTip.position.set(-0.12, 0.11, 0); 
+            faucetGroup.add(fBase, fSpout, fTip);
+            faucetGroup.position.set(ROOM_X/2 - counterDepth/2 + 0.25, counterHeight, sz);
+            bathroomGroup.add(faucetGroup);
+
+            if (sz + 1.0 < counterLength/2) {
+                let dispenser = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.2), dispenserMat);
+                dispenser.position.set(ROOM_X/2 - 0.15, counterHeight + 0.5, sz + 1.0);
+                dispenser.castShadow = true;
+                bathroomGroup.add(dispenser);
+            }
+        }
+
+        FURNITURE_BOUNDS.push({
+            minX: ROOM_X/2 - counterDepth - 0.5, maxX: ROOM_X/2,
+            minZ: -counterLength/2 - 0.5, maxZ: counterLength/2 + 0.5
+        });
+    }
+
+    function createHumanMesh() {
+        const group = new THREE.Group();
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.4 });
+        const shirtMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.7 });
+        const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.8 });
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), skinMat);
+        head.position.y = 1.65; head.castShadow = true;
+        
+        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.15, 0.6, 16), shirtMat);
+        torso.position.y = 1.2; torso.castShadow = true;
+
+        function createLimb(rt, rb, h, mat) {
+            const geo = new THREE.CylinderGeometry(rt, rb, h, 16);
+            geo.translate(0, -h / 2, 0);
+            const m = new THREE.Mesh(geo, mat); m.castShadow = true; return m;
+        }
+
+        const legL = createLimb(0.06, 0.05, 0.8, pantsMat); legL.position.set(-0.1, 0.9, 0);
+        const legR = createLimb(0.06, 0.05, 0.8, pantsMat); legR.position.set(0.1, 0.9, 0);
+        
+        const armL = createLimb(0.05, 0.04, 0.7, shirtMat); armL.position.set(-0.25, 1.45, 0);
+        const armR = createLimb(0.05, 0.04, 0.7, shirtMat); armR.position.set(0.25, 1.45, 0);
+
+        group.add(head, torso, legL, legR, armL, armR);
+        group.userData = { legL, legR, armL, armR, walkCycle: Math.random() * Math.PI * 2 };
+        return group;
+    }
+
+    function build3DZones() {
+        SIM_ZONES.forEach(z => {
+            const fixtureGroup = new THREE.Group();
+            const bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.05, 32), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.1 }));
+            const core = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.06, 32), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.8 }));
+            core.position.y = -0.01;
+            const ledRing = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.02, 16, 32), new THREE.MeshBasicMaterial({ color: HEX_COLORS.conal }));
+            ledRing.rotation.x = Math.PI / 2; ledRing.position.y = -0.04;
+
+            fixtureGroup.add(bezel, core, ledRing);
+            fixtureGroup.position.set(z.x, currentRoomHeight, z.z);
+            scene.add(fixtureGroup);
+
+            // Scale the physical cone using the custom zone radius
+            const coneGeo = new THREE.ConeGeometry(z.radius, currentRoomHeight, 32, 1, true);
+            coneGeo.translate(0, -currentRoomHeight / 2, 0);
+            const coneMat = createBeamMaterial(HEX_COLORS.conal, 0.2);
+            const cone = new THREE.Mesh(coneGeo, coneMat);
+            cone.position.set(z.x, currentRoomHeight, z.z);
+
+            const spotLight = new THREE.SpotLight(HEX_COLORS.conal, 3.5); 
+            spotLight.position.set(z.x, currentRoomHeight, z.z);
+            spotLight.angle = Math.atan(z.radius / currentRoomHeight);
+            spotLight.penumbra = 0.5; spotLight.distance = currentRoomHeight * 1.5;
+            const spotTarget = new THREE.Object3D(); spotTarget.position.set(z.x, 0, z.z);
+            scene.add(spotTarget); spotLight.target = spotTarget;
+            scene.add(cone, spotLight);
+
+            zoneMeshes[z.id] = { fixtureGroup, cone, spotLight, spotTarget, ledRing };
+        });
+    }
+
+    let lastTime = performance.now();
+
+    function updateSimulation() {
+        const now = performance.now();
+        const dt = (now - lastTime) / 1000.0;
+        lastTime = now;
+
+        PEOPLE.forEach(p => p.update(dt));
+
+        // 1. DYNAMIC DOOR LOGIC (must calculate first so SUVOS can read it)
+        let stallDoorOpen = [false, false, false, false, false, false];
+        if (window.stallDoors) {
+            window.stallDoors.forEach((doorHinge, index) => {
+                let doorZ = doorHinge.userData.zCenter;
+                let doorX = -1.2; 
+                let shouldOpen = false;
+
+                PEOPLE.forEach(p => {
+                    if (!p.active) return;
+                    let dist = Math.hypot(p.x - doorX, p.z - doorZ);
+                    
+                    if (dist < 1.8) {
+                        let goingIn = Math.abs(p.tz - doorZ) < 0.5 && p.tx < -1.2;
+                        let comingOut = Math.abs(p.z - doorZ) < 0.5 && p.x < -1.2 && p.tx > -1.2;
+                        let inside = Math.abs(p.z - doorZ) < 0.5 && p.x < -1.5;
+
+                        if (goingIn || comingOut || inside) {
+                            if (p.currentAction === 'stall' && p.pausing && p.x < -2.0) {
+                                shouldOpen = false; 
+                            } else {
+                                shouldOpen = true; 
+                            }
+                        }
+                    }
+                });
+
+                let targetRot = shouldOpen ? -Math.PI / 2 : 0;
+                doorHinge.rotation.y += (targetRot - doorHinge.rotation.y) * 0.1;
+                
+                // Track if door is currently open physically or logically
+                if (doorHinge.rotation.y < -0.1 || shouldOpen) {
+                    stallDoorOpen[index] = true;
+                }
+            });
+        }
+
+        // 2. CHECK SUVOS OCCUPANCY
+        SIM_ZONES.forEach((z, idx) => {
+            z.occupied = false;
+            
+            // For stalls, instantly shut off if door is hinged open
+            if (idx < numStalls && stallDoorOpen[idx]) {
+                z.occupied = true;
+            }
+
+            // Standard physical proximity check
+            for(let p of PEOPLE) {
+                if (!p.active) continue; 
+                if(Math.hypot(p.x - z.x, p.z - z.z) < z.radius) {
+                    z.occupied = true; break;
+                }
+            }
+            
+            let zm = zoneMeshes[z.id];
+            if (z.occupied) {
+                zm.cone.visible = false; 
+                zm.spotLight.visible = false;
+                zm.ledRing.material.color.setHex(0x333333); 
+            } else {
+                zm.cone.visible = true; 
+                zm.spotLight.visible = true;
+                zm.ledRing.material.color.setHex(HEX_COLORS.conal); 
+            }
+        });
+
+        updateDashboard();
+        updateSimMath();
+
+        // 3. Animate people
+        PEOPLE.forEach((p, i) => {
+            let mesh = humanMeshes[i]; let rig = mesh.userData;
+            
+            if (!p.active) {
+                mesh.visible = false;
+                return;
+            } else {
+                mesh.visible = true;
+            }
+
+            let dx = p.tx - mesh.position.x; let dz = p.tz - mesh.position.z;
+            let moveDist = Math.hypot(p.x - mesh.position.x, p.z - mesh.position.z);
+            mesh.position.x = p.x; mesh.position.z = p.z;
+
+            if (moveDist > 0.001 && !p.pausing) {
+                mesh.rotation.y = Math.atan2(dx, dz);
+                rig.walkCycle += moveDist * 6;
+                let swing = Math.sin(rig.walkCycle) * 0.4;
+                rig.legL.rotation.x = swing; rig.legR.rotation.x = -swing;
+                rig.armL.rotation.x = -swing; rig.armR.rotation.x = swing;
+            } else {
+                rig.legL.rotation.x *= 0.8; rig.legR.rotation.x *= 0.8;
+                rig.armL.rotation.x *= 0.3; rig.armR.rotation.x *= 0.3;
+
+                if (p.pausing) {
+                    if (p.currentAction === 'stall') mesh.rotation.y = -Math.PI / 2; 
+                    if (p.currentAction === 'door') mesh.rotation.y = Math.PI;       
+                    
+                    if (p.currentAction === 'wash') {
+                        mesh.rotation.y = Math.PI / 2; 
+                        let washCycle = now * 0.008; 
+                        rig.armL.rotation.x = -Math.PI / 2.2 + Math.sin(washCycle) * 0.1;
+                        rig.armR.rotation.x = -Math.PI / 2.2 + Math.cos(washCycle) * 0.1;
+                        rig.armL.rotation.z = 0.2; 
+                        rig.armR.rotation.z = -0.2;
+                    }
+                }
+            }
+        });
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        updateSimulation();
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    applySettings(); 
+    animate();
+
+</script>
+</body>
+</html>

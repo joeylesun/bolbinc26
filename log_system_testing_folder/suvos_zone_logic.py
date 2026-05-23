@@ -5,18 +5,6 @@ This is the logging/state-machine core of SUVOS, pulled out of
 suvos_working.py so it can be exercised WITHOUT cameras, YOLO, OpenCV,
 serial, or websockets. It depends only on the Python standard library
 (sqlite3, datetime), so it can be tested on any machine.
-
-suvos_working.py should import State, LedFSM, and ZoneLogger from here
-rather than redefining them, so the production code and the test exercise
-exactly the same logic.
-
-The contract:
-  • You feed step() a per-zone occupancy dict and a dt (seconds elapsed).
-  • step() advances each zone's state machine, computes the UV-C bit
-    vector, detects transitions, and writes a log row for each change.
-  • Occupancy is whatever upstream produced it — YOLO detections in
-    production, or a scripted timeline in the test. The logger doesn't
-    care where it came from.
 """
 
 import os

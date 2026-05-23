@@ -3,20 +3,12 @@ test_log_system.py — verify the SUVOS UV-C logging system without hardware.
 ===========================================================================
 
 Runs entirely on the standard library. No cameras, no YOLO, no OpenCV.
-Your colleague can run this on any machine with Python — just hit Run.
 
 It exercises the REAL logging core (suvos_zone_logic.ZoneLogger, the same
 class suvos_working.py uses) by injecting scripted occupancy timelines
 that stand in for what the camera + YOLO pipeline would produce. Each
 scenario checks that the correct rows land in SQLite with the correct
 reason strings.
-
-What "mimicking working mode" means here:
-  In production, every loop tick the system computes a per-zone occupancy
-  dict (from YOLO detections + the darkness watchdog) and calls
-  ZoneLogger.step(occupied, dt, any_dark). This test does exactly that,
-  but the occupancy dict comes from a timeline we control instead of a
-  camera. The FSM, transition detection, and SQLite writes are identical.
 """
 
 import os

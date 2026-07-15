@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Draft Bolb reference-design product page with design story, architecture library, draft parameters, and application links.">
+<title>Bolb — UV-C Reference Designs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="logo" aria-label="Bolb homepage"><span class="sunmark" aria-hidden="true"></span>bolb</a>
+    <div class="nav-spacer"></div>
+    <button class="explore-toggle" data-menu-toggle aria-expanded="false" aria-controls="site-menu">Explore
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5 6 8l4-3.5" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="uv-c-leds.html">Products</a><a href="index.html#applications">Applications</a><a href="index.html#about">About</a><a href="index.html#insights">Blog</a><a href="mailto:info@bolb.co">Contact</a>
+    </nav>
+    <a class="btn btn-primary nav-cta" href="mailto:info@bolb.co">Get in touch</a>
+    <button class="mobile-menu" data-menu-toggle aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </div>
+</header>
+<div class="mega" id="site-menu" data-menu>
+  <div class="wrap mega-grid">
+    <div class="mega-intro"><span class="eyebrow">Explore Bolb</span><h2>UV-C technology from chip to application.</h2><p>Navigate product families, application stories, technical insights, and project support.</p></div>
+    <div class="mega-col"><h3>Products</h3><a href="uv-c-leds.html"><b>UV-C LEDs</b><span>Discrete high-output emitters</span></a><a href="uv-c-arrays.html"><b>UV-C arrays</b><span>Scalable optical power</span></a><a href="reference-designs.html"><b>Reference designs</b><span>Accelerate integration</span></a><a href="guardian-vision.html"><b>Guardian Vision</b><span>Safety and intelligent control</span></a></div>
+    <div class="mega-col"><h3>Applications</h3><a href="air.html"><b>Air disinfection</b><span>In-duct and room-air systems</span></a><a href="water.html"><b>Water disinfection</b><span>Flow-through reactor concepts</span></a><a href="surfaces.html"><b>Surface disinfection</b><span>Targeted high-touch treatment</span></a><a href="food-safety.html"><b>Food safety</b><span>Processing and packaging lines</span></a></div>
+    <div class="mega-col"><h3>Company &amp; resources</h3><a href="index.html#about"><b>About Bolb</b><span>Technology and purpose</span></a><a href="index.html#insights"><b>Blog &amp; insights</b><span>Technical perspectives</span></a><a href="mailto:info@bolb.co"><b>Talk to an expert</b><span>Discuss an application</span></a><a href="mailto:info@bolb.co"><b>Request information</b><span>Datasheets and samples</span></a></div>
+  </div>
+</div>
+<main id="main">
+<section class="subhero product-subhero">
+  <div class="wrap">
+    <div class="breadcrumb"><a href="index.html">Home</a><span>›</span><a href="index.html#products">Products</a><span>›</span><span>Reference designs</span></div>
+    <div class="subhero-grid">
+      <div class="reveal"><span class="eyebrow">Reference designs</span><h1>Reference designs</h1><p>Reference designs connect UV-C components to real system architectures. They can give OEM teams a starting point for optical layout, drive electronics, thermal design, controls, and validation planning.</p><div class="hero-actions" style="margin-top:28px"><a class="btn btn-primary" href="#parameters">View draft parameters →</a><a class="btn btn-outline" href="mailto:info@bolb.co">Request product information</a></div></div>
+      <div class="subhero-media product-hero-media reveal delay-1"><img src="assets/product-reference.jpg" alt="Electronic reference design board for UV-C integration"><div class="product-hero-badge"><span>PRODUCT FAMILY</span><b>Reference designs</b></div></div>
+    </div>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap story-layout">
+    <aside class="story-kicker reveal"><span class="eyebrow">Product story</span><h2>A faster path from promising component to testable system.</h2><p>This draft positions reference designs as engineering accelerators. They are not finished products or substitutes for application-specific safety, regulatory, and microbial validation.</p></aside>
+    <div class="story-copy"><div class="story-step reveal"><span>01 — Architecture</span><h3>Start from a known system pattern</h3><p>Reference concepts can demonstrate how emitters, arrays, optics, drivers, thermal paths, sensors, and enclosures fit together.</p></div><div class="story-step reveal"><span>02 — Adaptation</span><h3>Modify around the customer requirement</h3><p>Geometry, flow, line speed, materials, power budget, controls, and manufacturing constraints determine what must change.</p></div><div class="story-step reveal"><span>03 — Validation</span><h3>Use the prototype to close the engineering loop</h3><p>Optical, thermal, electrical, safety, reliability, and microbial testing confirm whether the adapted design meets the actual requirement.</p></div></div>
+  </div>
+</section>
+<section class="section workflow">
+  <div class="wrap"><header class="section-head reveal"><span class="eyebrow">Integration path</span><h2 class="section-title">From reference architecture to customer prototype.</h2></header><div class="workflow-grid"><article class="workflow-card reveal delay-0"><div class="number">1</div><h3>Select the closest architecture</h3><p>Choose an air, water, surface, or food-processing concept that resembles the operating environment.</p></article><article class="workflow-card reveal delay-1"><div class="number">2</div><h3>Customize the critical interfaces</h3><p>Adapt source quantity, mechanics, optics, driver, thermal solution, sensors, controls, and service strategy.</p></article><article class="workflow-card reveal delay-2"><div class="number">3</div><h3>Test against the real requirement</h3><p>Validate dose, microbial performance, temperature, electrical behavior, safety logic, and reliability.</p></article></div></div>
+</section>
+<section class="section parameters" id="parameters">
+  <div class="wrap"><header class="section-head reveal"><span class="eyebrow">Product parameters</span><h2 class="section-title">Draft selection table.</h2><p>This table shows a draft structure for presenting a reference-design library. Final names, included hardware, and performance should be confirmed before publication.</p></header>
+    <div class="table-wrap reveal"><table><thead><tr><th>Reference concept</th><th>Primary application</th><th>UV-C source format</th><th>Key design variables</th><th>Typical deliverables</th><th>Status</th></tr></thead><tbody><tr><td><b>Compact air-treatment concept</b></td><td>Recirculating air or small duct</td><td>Discrete LEDs or linear array</td><td>Airflow, residence time, pressure drop, irradiance uniformity, fan heat</td><td>Optical layout, board/driver concept, chamber guidance, test plan</td><td>Draft architecture</td></tr><tr><td><b>Flow-through water reactor concept</b></td><td>Point-of-use or appliance water</td><td>Discrete LEDs or compact array</td><td>UV transmittance, flow, optical path, wetted materials, fouling</td><td>Reactor geometry, optical model inputs, thermal strategy, validation plan</td><td>Draft architecture</td></tr><tr><td><b>Surface-treatment concept</b></td><td>Enclosure, high-touch surface, process zone</td><td>Wide-angle emitters or area array</td><td>Distance, shadowing, cycle time, access control, reflectivity</td><td>Placement concept, dose map, control logic, safety review inputs</td><td>Draft architecture</td></tr><tr><td><b>Conveyor / food-process concept</b></td><td>Packaging or processing line</td><td>Linear or modular arrays</td><td>Line speed, product orientation, hygiene target, washdown environment</td><td>Array layout, mechanical envelope, controls, test approach</td><td>Draft architecture</td></tr></tbody></table></div>
+    <p class="draft-note">Draft status: confirm current product names, availability, binning, optical and electrical conditions, lifetime, certifications, and test methods against controlled Bolb documentation before publication.</p>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap"><header class="section-head reveal"><span class="eyebrow">Engineering considerations</span><h2 class="section-title">The interfaces a useful reference design should make explicit.</h2></header><div class="design-grid"><article class="design-card reveal delay-0"><div class="design-icon">◈</div><b>Optical architecture</b><p>Source placement, reflector or lens strategy, working distance, and expected dose field.</p></article><article class="design-card reveal delay-1"><div class="design-icon">↯</div><b>Electrical system</b><p>Driver topology, power input, control interface, monitoring, and protection.</p></article><article class="design-card reveal delay-2"><div class="design-icon">△</div><b>Thermal system</b><p>Heat path, heatsink, airflow or liquid cooling, sensors, and operating limits.</p></article><article class="design-card reveal delay-3"><div class="design-icon">✓</div><b>Validation plan</b><p>Measurements, microbial testing, safety review, materials, and representative use conditions.</p></article></div></div>
+</section>
+<section class="section product-applications">
+  <div class="wrap"><header class="section-head reveal"><span class="eyebrow">Application fit</span><h2 class="section-title">See the product inside a complete system.</h2><p>Product selection is only one part of a validated UV-C design. Continue into the application story that best matches the operating environment.</p></header><div class="product-app-grid"><a class="product-app-link reveal delay-0" href="air.html"><span>01 — Air</span><b>Air disinfection</b><p>Build the UV-C source around airflow, treatment-zone geometry, and required dose.</p><em>Open application →</em></a><a class="product-app-link reveal delay-1" href="water.html"><span>02 — Water</span><b>Water disinfection</b><p>Match wavelength, irradiance, optical path, and thermal design to the reactor.</p><em>Open application →</em></a><a class="product-app-link reveal delay-0" href="surfaces.html"><span>03 — Surfaces</span><b>Surface disinfection</b><p>Create coverage while controlling distance, shadows, cycle timing, and access.</p><em>Open application →</em></a><a class="product-app-link reveal delay-1" href="food-safety.html"><span>04 — Food safety</span><b>Food safety</b><p>Integrate UV-C with line speed, product handling, hygiene goals, and validation.</p><em>Open application →</em></a></div></div>
+</section>
+<section class="section"><div class="wrap"><div class="cta-band reveal"><div><span class="eyebrow" style="color:#ffaaa6">Product engineering</span><h2>Use a reference design to reduce uncertainty—not to skip validation.</h2><p>Describe the target application, prototype stage, mechanical envelope, performance goal, and certification path so the closest architecture can be identified.</p></div><a class="btn" href="mailto:info@bolb.co">Contact Bolb →</a></div></div></section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand"><a class="logo" href="index.html"><span class="sunmark"></span>bolb</a><p class="muted" style="max-width:310px;margin-top:17px;font-size:14px">High-performance UV-C emitters, arrays, and engineering support for air, water, surface, and food-safety applications.</p></div>
+      <div><h4>Products</h4><ul><li><a href="uv-c-leds.html">UV-C LEDs</a></li><li><a href="uv-c-arrays.html">UV-C arrays</a></li><li><a href="reference-designs.html">Reference designs</a></li><li><a href="guardian-vision.html">Guardian Vision</a></li></ul></div>
+      <div><h4>Applications</h4><ul><li><a href="air.html">Air</a></li><li><a href="water.html">Water</a></li><li><a href="surfaces.html">Surfaces</a></li><li><a href="food-safety.html">Food safety</a></li></ul></div>
+      <div><h4>Company</h4><ul><li><a href="index.html#about">About</a></li><li><a href="index.html#insights">Blog</a></li><li><a href="mailto:info@bolb.co">Contact</a></li></ul></div>
+      <div><h4>Contact</h4><ul><li><a href="mailto:info@bolb.co">info@bolb.co</a></li><li>San Jose, California</li></ul></div>
+    </div>
+    <div class="footer-note"><span>© <span data-year></span> Bolb Inc.</span><span>Product and application website draft · Verify specifications before publication</span></div>
+  </div>
+</footer>
+<script src="assets/site.js"></script>
+</body></html>

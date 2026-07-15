@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Draft Bolb air disinfection application page with system story, product selection, and design parameters.">
+<title>Bolb — Air Disinfection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="logo" aria-label="Bolb homepage"><span class="sunmark" aria-hidden="true"></span>bolb</a>
+    <div class="nav-spacer"></div>
+    <button class="explore-toggle" data-menu-toggle aria-expanded="false" aria-controls="site-menu">Explore
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5 6 8l4-3.5" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="uv-c-leds.html">Products</a><a href="index.html#applications">Applications</a><a href="index.html#about">About</a><a href="index.html#insights">Blog</a><a href="mailto:info@bolb.co">Contact</a>
+    </nav>
+    <a class="btn btn-primary nav-cta" href="mailto:info@bolb.co">Get in touch</a>
+    <button class="mobile-menu" data-menu-toggle aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </div>
+</header>
+<div class="mega" id="site-menu" data-menu>
+  <div class="wrap mega-grid">
+    <div class="mega-intro"><span class="eyebrow">Explore Bolb</span><h2>UV-C technology from chip to application.</h2><p>Navigate product families, application stories, technical insights, and project support.</p></div>
+    <div class="mega-col"><h3>Products</h3><a href="uv-c-leds.html"><b>UV-C LEDs</b><span>Discrete high-output emitters</span></a><a href="uv-c-arrays.html"><b>UV-C arrays</b><span>Scalable optical power</span></a><a href="reference-designs.html"><b>Reference designs</b><span>Accelerate integration</span></a><a href="guardian-vision.html"><b>Guardian Vision</b><span>Safety and intelligent control</span></a></div>
+    <div class="mega-col"><h3>Applications</h3><a href="air.html"><b>Air disinfection</b><span>In-duct and room-air systems</span></a><a href="water.html"><b>Water disinfection</b><span>Flow-through reactor concepts</span></a><a href="surfaces.html"><b>Surface disinfection</b><span>Targeted high-touch treatment</span></a><a href="food-safety.html"><b>Food safety</b><span>Processing and packaging lines</span></a></div>
+    <div class="mega-col"><h3>Company &amp; resources</h3><a href="index.html#about"><b>About Bolb</b><span>Technology and purpose</span></a><a href="index.html#insights"><b>Blog &amp; insights</b><span>Technical perspectives</span></a><a href="mailto:info@bolb.co"><b>Talk to an expert</b><span>Discuss an application</span></a><a href="mailto:info@bolb.co"><b>Request information</b><span>Datasheets and samples</span></a></div>
+  </div>
+</div>
+
+<main id="main">
+<section class="subhero">
+  <div class="wrap">
+    <div class="breadcrumb"><a href="index.html">Home</a><span>›</span><a href="index.html#applications">Applications</a><span>›</span><span>Air Disinfection</span></div>
+    <div class="subhero-grid">
+      <div class="reveal"><span class="eyebrow">Air application</span><h1>Cleaner air starts inside the airflow.</h1><p>UV-C LEDs can be placed where air already moves—inside ducts, recirculating units, and compact air-treatment chambers—to apply a repeatable germicidal dose without adding chemicals to the airstream.</p><div class="hero-actions" style="margin-top:28px"><a class="btn btn-primary" href="#parameters">View draft parameters →</a><a class="btn btn-outline" href="mailto:info@bolb.co">Discuss this application</a></div></div>
+      <div class="subhero-media reveal delay-1"><img src="assets/app-air.jpg" alt="Air Disinfection application visual"></div>
+    </div>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap story-layout">
+    <aside class="story-kicker reveal"><span class="eyebrow">Application story</span><h2>A controlled dose during every pass.</h2><p>This draft explains how Bolb’s UV-C LED platform could fit into the complete product architecture. Final language should be supported by application-specific test data.</p></aside>
+    <div class="story-copy"><div class="story-step reveal"><span>01 — The challenge</span><h3>The challenge</h3><p>Air moves quickly, organisms vary in susceptibility, and a compact chamber may provide only a short exposure time. The design must create sufficient irradiance across the active airflow while managing pressure drop, heat, and electrical power.</p></div><div class="story-step reveal"><span>02 — The UV-C role</span><h3>The UV-C role</h3><p>High-output LEDs and arrays illuminate the treatment zone as air passes through it. Reflective chamber surfaces, emitter placement, and residence time work together to improve dose uniformity.</p></div><div class="story-step reveal"><span>03 — The system story</span><h3>The system story</h3><p>A product team starts with target airflow and reduction goals, selects an emitter or array format, models the optical field, then validates performance in the actual duct or appliance. Guardian Vision may be added only when an occupied-space product needs presence-aware control.</p></div></div>
+  </div>
+</section>
+<section class="section workflow">
+  <div class="wrap"><header class="section-head reveal"><span class="eyebrow">Development path</span><h2 class="section-title">From requirement to validated system.</h2></header><div class="workflow-grid"><article class="workflow-card reveal delay-0"><div class="number">1</div><h3>Define the air path</h3><p>Map airflow rate, chamber dimensions, residence time, target organism, and required reduction.</p></article><article class="workflow-card reveal delay-1"><div class="number">2</div><h3>Build the optical zone</h3><p>Select LED quantity, array geometry, optics, reflectors, drive current, and thermal path.</p></article><article class="workflow-card reveal delay-2"><div class="number">3</div><h3>Validate the complete unit</h3><p>Measure irradiance, temperature, airflow impact, and microbial reduction under representative conditions.</p></article></div></div>
+</section>
+<section class="section parameters" id="parameters">
+  <div class="wrap"><header class="section-head reveal"><span class="eyebrow">Product selection</span><h2 class="section-title">Draft product and parameter table.</h2><p>These rows are a starting point for web structure and customer discussion—not a replacement for current product datasheets or an application validation report.</p></header>
+    <div class="table-wrap reveal"><table><thead><tr><th>Candidate product</th><th>Peak wavelength</th><th>Format</th><th>Output / drive</th><th>Application fit</th><th>Draft engineering note</th></tr></thead><tbody><tr><td><b>S3535-H 5×5 array</b></td><td>265 nm</td><td>25-up array</td><td>2.5 W optical at 42 W input</td><td>High-flow air chamber</td><td>Existing Bolb concept used for a 3,000 LPM single-pass demonstration; confirm current datasheet and test conditions.</td></tr><tr><td><b>S3535-H 1×12</b></td><td>265 nm</td><td>Linear array</td><td>Custom by drive condition</td><td>Duct edge-to-edge coverage</td><td>Linear geometry supports long treatment zones and repeated rows.</td></tr><tr><td><b>S3535-H discrete</b></td><td>265 nm</td><td>3.5 × 3.5 mm</td><td>Model-dependent</td><td>Compact air appliance</td><td>Useful where mechanical placement and thermal spreading are customized.</td></tr></tbody></table></div>
+    <p class="draft-note">Draft status: product names and values are based on the earlier website concept content. Confirm current availability, bin conditions, optical power, electrical input, lifetime, and test conditions before publication.</p>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap"><header class="section-head reveal"><span class="eyebrow">Key design inputs</span><h2 class="section-title">Parameters that determine the complete system.</h2></header><div class="design-grid"><article class="design-card reveal delay-0"><div class="design-icon">≈</div><b>Airflow</b><p>LPM or CFM, velocity profile, turbulence, and residence time.</p></article><article class="design-card reveal delay-1"><div class="design-icon">◌</div><b>Optical dose</b><p>Irradiance distribution multiplied by exposure time for each air parcel.</p></article><article class="design-card reveal delay-2"><div class="design-icon">✦</div><b>Thermal design</b><p>Junction temperature, heatsink resistance, fan conditions, and driver efficiency.</p></article><article class="design-card reveal delay-3"><div class="design-icon">◇</div><b>Validation</b><p>Microbial test method, sampling location, single-pass versus cumulative performance.</p></article></div></div>
+</section>
+<section class="section"><div class="wrap"><div class="cta-band reveal"><div><span class="eyebrow" style="color:#ffaaa6">Application engineering</span><h2>Turn the draft into a testable design.</h2><p>Share target performance, geometry, operating conditions, and production constraints so the source and system can be evaluated together.</p></div><a class="btn" href="mailto:info@bolb.co">Contact Bolb →</a></div></div></section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand"><a class="logo" href="index.html"><span class="sunmark"></span>bolb</a><p class="muted" style="max-width:310px;margin-top:17px;font-size:14px">High-performance UV-C emitters, arrays, and engineering support for air, water, surface, and food-safety applications.</p></div>
+      <div><h4>Products</h4><ul><li><a href="uv-c-leds.html">UV-C LEDs</a></li><li><a href="uv-c-arrays.html">UV-C arrays</a></li><li><a href="reference-designs.html">Reference designs</a></li><li><a href="guardian-vision.html">Guardian Vision</a></li></ul></div>
+      <div><h4>Applications</h4><ul><li><a href="air.html">Air</a></li><li><a href="water.html">Water</a></li><li><a href="surfaces.html">Surfaces</a></li><li><a href="food-safety.html">Food safety</a></li></ul></div>
+      <div><h4>Company</h4><ul><li><a href="index.html#about">About</a></li><li><a href="index.html#insights">Blog</a></li><li><a href="mailto:info@bolb.co">Contact</a></li></ul></div>
+      <div><h4>Contact</h4><ul><li><a href="mailto:info@bolb.co">info@bolb.co</a></li><li>San Jose, California</li></ul></div>
+    </div>
+    <div class="footer-note"><span>© <span data-year></span> Bolb Inc.</span><span>Product and application website draft · Verify specifications before publication</span></div>
+  </div>
+</footer>
+<script src="assets/site.js"></script>
+</body></html>
